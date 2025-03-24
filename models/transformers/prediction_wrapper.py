@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.hub import download_url_to_file
 
 from config import RESOURCES_FOLDER, CHECKPOINT_URLS
-from models.seq_models import BidirectionalLSTM, BidirectionalGRU
+from models.transformers.seq_models import BidirectionalLSTM, BidirectionalGRU
 
 
 class PredictionsWrapper(nn.Module):
@@ -25,9 +25,9 @@ class PredictionsWrapper(nn.Module):
                                             Default is None, which means no additional sequence model is used.
             head_type (str, optional): Type of classification head. Choices are ["linear", "attention", "None"].
                                        Default is "linear". "None" means that sequence embeddings are returned.
-            rnn_layers (int, optional): Number of RNN layers if seq_model_type is "rnn". Default is 2.
+            rnn_layers (int, optional): Number of RNN layers if seq_model_type is "gru". Default is 2.
             rnn_type (str, optional): Type of RNN to use. Choices are ["BiGRU", "BiLSTM"]. Default is "BiGRU".
-            rnn_dim (int, optional): Dimension of RNN hidden state if seq_model_type is "rnn". Default is 256.
+            rnn_dim (int, optional): Dimension of RNN hidden state if seq_model_type is "gru". Default is 256.
             rnn_dropout (float, optional): Dropout rate for RNN layers. Default is 0.0.
         """
 
@@ -54,7 +54,7 @@ class PredictionsWrapper(nn.Module):
         self.seq_model_type = seq_model_type
         self.head_type = head_type
 
-        if self.seq_model_type == "rnn":
+        if self.seq_model_type == "gru":
             if rnn_type == "BiGRU":
                 self.seq_model = BidirectionalGRU(
                     n_in=self.embed_dim,
@@ -122,7 +122,7 @@ class PredictionsWrapper(nn.Module):
             keys_to_remove.append('strong_head.bias')
             keys_to_remove.append('strong_head.weight')
         elif self.seq_model_type is not None and not seq_model_in_sd:
-            # we want to train a sequence model (e.g., rnn) on top of a
+            # we want to train a sequence model (e.g., gru) on top of a
             #   pre-trained transformer (e.g., AS weak pretrained)
             keys_to_remove.append('weak_head.bias')
             keys_to_remove.append('weak_head.weight')

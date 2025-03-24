@@ -17,8 +17,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.frame_passt.vit_helpers import (DropPath, trunc_normal_,
-                                            build_model_with_cfg, adapt_input_conv)
+from models.transformers.frame_passt.vit_helpers import (DropPath, trunc_normal_,
+                                                         build_model_with_cfg, adapt_input_conv)
 
 _logger = logging.getLogger()
 

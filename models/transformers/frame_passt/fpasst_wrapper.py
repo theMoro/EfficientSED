@@ -1,6 +1,6 @@
-from models.frame_passt.fpasst import get_model
-from models.frame_passt.preprocess import AugmentMelSTFT
-from models.transformer_wrapper import BaseModelWrapper
+from models.transformers.frame_passt.fpasst import get_model
+from models.transformers.frame_passt.preprocess import AugmentMelSTFT
+from models.transformers.transformer_wrapper import BaseModelWrapper
 
 
 class FPaSSTWrapper(BaseModelWrapper):

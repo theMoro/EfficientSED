@@ -14,7 +14,7 @@ import torch
 from torch import Tensor, nn
 import torch.nn.functional as F
 from torch.nn import LayerNorm, Parameter
-from models.beats.modules import (
+from models.transformers.beats.modules import (
     GradMultiply,
     SamePad,
     get_activation_fn,

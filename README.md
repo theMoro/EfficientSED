@@ -26,9 +26,24 @@ The code of this repository is based on [PretrainedSED](https://github.com/fschm
 
 ---
 
-## Repository in process
+
+### ! Repository in process !
 
 This repository is in process and will be updated with the pre-trained models and the code for training the efficient models in the next few weeks.
+
+**Update:** Repository is constantly being updated - this is not the final version.
+
+**TODO:**
+- [x] Add code for all the sequence models.
+- [ ] Add code for training the efficient CNNs on AudioSet Strong.
+- [ ] Fix the load_state_dict method in wrapper.py to work for all sequence models and both the Audio Transformers and the Efficient CNNs.
+- [ ] Merge the two Wrapper classes for the Audio Transformers and the Efficient CNNs.
+- [ ] Add file to train the efficient models using the "Online Teacher KD" setup. 
+- [ ] Add pre-trained models.
+- [ ] Check inference.py for the efficient models.
+- [ ] Add plots from the paper to the README file. 
+
+
 
 
 

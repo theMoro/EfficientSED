@@ -1,40 +1,17 @@
-from models.frame_passt.preprocess import AugmentMelSTFT
-from models.transformer_wrapper import BaseModelWrapper
-from models.frame_mn.model import get_model
+from models.transformers.m2d.portable_m2d import PortableM2D as M2D
+from models.transformers.transformer_wrapper import BaseModelWrapper
 
 
-class FrameMNWrapper(BaseModelWrapper):
-    def __init__(self, width_mult=1.0) -> None:
+class M2DWrapper(BaseModelWrapper):
+    def __init__(self) -> None:
         super().__init__()
-        self.mel = AugmentMelSTFT(
-            n_mels=128,
-            sr=16_000,
-            win_length=400,
-            hopsize=160,
-            n_fft=512,
-            freqm=0,
-            timem=0,
-            htk=False,
-            fmin=0.0,
-            fmax=None,
-            norm=1,
-            fmin_aug_range=10,
-            fmax_aug_range=2000,
-            fast_norm=True,
-            preamp=True,
-            padding="center",
-            periodic_window=False,
-        )
-
-        self.frame_mn = get_model(
-            width_mult=width_mult
-        )
+        self.m2d = M2D()
 
     def mel_forward(self, x):
-        return self.mel(x)
+        return self.m2d.to_normalized_feature(x)
 
-    def forward(self, x):
-        return self.frame_mn(x)
+    def forward(self, spec):
+        return self.m2d.forward_mel(spec)
 
     def separate_params(self):
         pt_params = [[], [], [], [], [], [], [], [], [], [], [], []]
@@ -68,8 +45,8 @@ class FrameMNWrapper(BaseModelWrapper):
                 pt_params[10].append(p)
             elif 'blocks.11.' in k:
                 pt_params[11].append(p)
-            elif 'asit.norm.weight' in k or 'asit.norm.bias' in k:
+            elif 'backbone.norm.weight' in k or 'backbone.norm.bias' in k:
                 pt_params[11].append(p)
             else:
-                raise ValueError(f"Check separate params for ASiT! Unknown key: {k}")
+                raise ValueError(f"Check separate params for M2D! Unknown key: {k}")
         return list(reversed(pt_params))

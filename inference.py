@@ -5,14 +5,14 @@ import torch
 from data_util import audioset_classes
 from helpers.decode import batched_decode_preds
 from helpers.encode import ManyHotEncoder
-from models.atstframe.ATSTF_wrapper import ATSTWrapper
-from models.beats.BEATs_wrapper import BEATsWrapper
-from models.frame_passt.fpasst_wrapper import FPaSSTWrapper
-from models.m2d.M2D_wrapper import M2DWrapper
-from models.asit.ASIT_wrapper import ASiTWrapper
-from models.frame_mn.Frame_MN_wrapper import FrameMNWrapper
-from models.prediction_wrapper import PredictionsWrapper
-from models.frame_mn.utils import NAME_TO_WIDTH
+from models.transformers.atstframe.ATSTF_wrapper import ATSTWrapper
+from models.transformers.beats.BEATs_wrapper import BEATsWrapper
+from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
+from models.transformers.m2d.M2D_wrapper import M2DWrapper
+from models.transformers.asit.ASIT_wrapper import ASiTWrapper
+from models.efficient_cnns.frame_mn.frame_mn_wrapper import FrameMNWrapper
+from models.transformers.prediction_wrapper import PredictionsWrapper
+from models.efficient_cnns.frame_mn.utils import NAME_TO_WIDTH
 
 
 def sound_event_detection(args):

@@ -1,25 +1,40 @@
-from models.asit.data_transformations import DataAugmentation
-from models.asit.vision_transformer import vit_base
-from models.transformer_wrapper import BaseModelWrapper
+from models.transformers.frame_passt.preprocess import AugmentMelSTFT
+from models.transformers.transformer_wrapper import BaseModelWrapper
+from models.efficient_cnns.frame_mn.model import get_model
 
 
-class ASiTWrapper(BaseModelWrapper):
-    def __init__(self) -> None:
+class FrameMNWrapper(BaseModelWrapper):
+    def __init__(self, width_mult=1.0) -> None:
         super().__init__()
-        self.asit_mel = DataAugmentation()
-        self.asit = vit_base(
-            patch_size=[16, 16],
-            audio_size=[128, 592],
-            stride=[16, 16],
-            in_chans=1,
-            num_classes=0
+        self.mel = AugmentMelSTFT(
+            n_mels=128,
+            sr=16_000,
+            win_length=400,
+            hopsize=160,
+            n_fft=512,
+            freqm=0,
+            timem=0,
+            htk=False,
+            fmin=0.0,
+            fmax=None,
+            norm=1,
+            fmin_aug_range=10,
+            fmax_aug_range=2000,
+            fast_norm=True,
+            preamp=True,
+            padding="center",
+            periodic_window=False,
+        )
+
+        self.frame_mn = get_model(
+            width_mult=width_mult
         )
 
     def mel_forward(self, x):
-        return self.asit_mel(x)
+        return self.mel(x)
 
-    def forward(self, spec):
-        return self.asit(spec)
+    def forward(self, x):
+        return self.frame_mn(x)
 
     def separate_params(self):
         pt_params = [[], [], [], [], [], [], [], [], [], [], [], []]

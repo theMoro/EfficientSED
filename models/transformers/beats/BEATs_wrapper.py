@@ -1,7 +1,7 @@
 import torch
 
-from models.beats.BEATs import BEATsConfig, BEATs
-from models.transformer_wrapper import BaseModelWrapper
+from models.transformers.beats.BEATs import BEATsConfig, BEATs
+from models.transformers.transformer_wrapper import BaseModelWrapper
 
 
 class BEATsWrapper(BaseModelWrapper):

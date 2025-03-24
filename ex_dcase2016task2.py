@@ -17,12 +17,12 @@ from data_util.dcase2016task2 import (get_training_dataset, get_validation_datas
 from helpers.augment import frame_shift, time_mask, mixup, filter_augmentation, mixstyle, RandomResizeCrop
 from helpers.score import get_events_for_all_files, combine_target_events, EventBasedScore, SegmentBasedScore
 from helpers.utils import worker_init_fn
-from models.asit.ASIT_wrapper import ASiTWrapper
-from models.atstframe.ATSTF_wrapper import ATSTWrapper
-from models.beats.BEATs_wrapper import BEATsWrapper
-from models.frame_passt.fpasst_wrapper import FPaSSTWrapper
-from models.m2d.M2D_wrapper import M2DWrapper
-from models.prediction_wrapper import PredictionsWrapper
+from models.transformers.asit.ASIT_wrapper import ASiTWrapper
+from models.transformers.atstframe.ATSTF_wrapper import ATSTWrapper
+from models.transformers.beats.BEATs_wrapper import BEATsWrapper
+from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
+from models.transformers.m2d.M2D_wrapper import M2DWrapper
+from models.transformers.prediction_wrapper import PredictionsWrapper
 
 
 class PLModule(pl.LightningModule):
@@ -482,7 +482,7 @@ if __name__ == '__main__':
     # "strong" = AudioSet Strong pre-trained
     parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong"],
                         default="strong")
-    parser.add_argument('--seq_model_type', type=str, choices=["rnn"],
+    parser.add_argument('--seq_model_type', type=str, choices=["gru"],
                         default=None)
     parser.add_argument('--n_classes', type=int, default=11)
 

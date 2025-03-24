@@ -13,20 +13,21 @@ import sed_scores_eval
 
 from helpers.decode import batched_decode_preds
 from helpers.encode import ManyHotEncoder
-from models.atstframe.ATSTF_wrapper import ATSTWrapper
-from models.beats.BEATs_wrapper import BEATsWrapper
-from models.frame_passt.fpasst_wrapper import FPaSSTWrapper
-from models.m2d.M2D_wrapper import M2DWrapper
-from models.asit.ASIT_wrapper import ASiTWrapper
-from models.prediction_wrapper import PredictionsWrapper
+from models.transformers.atstframe.ATSTF_wrapper import ATSTWrapper
+from models.transformers.beats.BEATs_wrapper import BEATsWrapper
+from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
+from models.transformers.m2d.M2D_wrapper import M2DWrapper
+from models.transformers.asit.ASIT_wrapper import ASiTWrapper
+from models.transformers.prediction_wrapper import PredictionsWrapper
 from helpers.augment import frame_shift, time_mask, mixup, filter_augmentation, mixstyle, RandomResizeCrop
 from helpers.utils import worker_init_fn
 from data_util.audioset_strong import get_training_dataset, get_eval_dataset
 from data_util.audioset_strong import get_temporal_count_balanced_sample_weights, get_uniform_sample_weights, \
     get_weighted_sampler
 from data_util.audioset_classes import as_strong_train_classes, as_strong_eval_classes
-from models.frame_mn.Frame_MN_wrapper import FrameMNWrapper
-from models.frame_mn.utils import NAME_TO_WIDTH
+from models.efficient_cnns.frame_mn.frame_mn_wrapper import FrameMNWrapper
+from models.efficient_cnns.frame_mn.utils import NAME_TO_WIDTH
+from models.wrapper import Wrapper
 
 
 class PLModule(pl.LightningModule):
@@ -68,11 +69,17 @@ class PLModule(pl.LightningModule):
             asit = ASiTWrapper()
             model = PredictionsWrapper(asit, checkpoint=f"ASIT_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type)
-        elif config.model_name.startswith("frame_mn"):
+        # or load CNN model
+        elif config.model_name.startswith("fmn"):
             width = NAME_TO_WIDTH(config.model_name)
             frame_mn = FrameMNWrapper(width)
-            embed_dim = frame_mn.state_dict()['frame_mn.features.16.1.bias'].shape[0]
-            model = PredictionsWrapper(frame_mn, checkpoint=f"{config.model_name}_strong_1", embed_dim=embed_dim)
+            embed_dim = frame_mn.state_dict()['frame_mn.features.16.1.bias'].shape[0]  # TODO: check that: frame_mn or fmn
+            model = Wrapper(
+                            frame_mn,
+                            checkpoint=f"{config.model_name}_strong_1" if checkpoint else None,
+                            seq_model_type=config.seq_model_type,
+                            embed_dim=embed_dim
+                            )
         else:
             raise NotImplementedError(f"Model {config.model_name} not (yet) implemented")
 
@@ -360,7 +367,7 @@ def train(config):
     wandb_logger = WandbLogger(
         project="PTSED",
         notes="Pre-Training Transformers for Sound Event Detection on AudioSet Strong.",
-        tags=["AudioSet Strong", "Sound Event Detection", "Pseudo Labels", "Knowledge Disitillation"],
+        tags=["AudioSet Strong", "Sound Event Detection", "Pseudo Labels", "Knowledge Distillation"],
         config=config,
         name=config.experiment_name
     )
@@ -456,15 +463,15 @@ if __name__ == '__main__':
     # model
     parser.add_argument('--model_name', type=str,
                         choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"] + \
-                                [f"frame_mn{width}" for width in ["06", "10"]],
-                        default="ATST-F")  # used also for training
+                                [f"fmn{width}" for width in ["04", "06", "10", "20", "30"]],
+                        default="fmn10")  # used also for training
     # "scratch" = no pretraining
     # "ssl" = SSL pre-trained
     # "weak" = AudioSet Weak pre-trained
     # "strong" = AudioSet Strong pre-trained
     parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong"],
                         default="weak")
-    parser.add_argument('--seq_model_type', type=str, choices=["rnn"],
+    parser.add_argument('--seq_model_type', type=str, choices=["gru"],
                         default=None)
 
     # training

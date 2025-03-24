@@ -13,7 +13,7 @@ import torch.nn as nn
 from torch.nn import LayerNorm
 import torchaudio.compliance.kaldi as ta_kaldi
 
-from models.beats.backbone import (
+from models.transformers.beats.backbone import (
     TransformerEncoder,
 )
 

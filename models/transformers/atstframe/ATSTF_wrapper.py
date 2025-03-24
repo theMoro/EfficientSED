@@ -1,8 +1,8 @@
 import torch
 from torchaudio.transforms import AmplitudeToDB, MelSpectrogram
 
-from models.atstframe.audio_transformer import FrameASTModel
-from models.transformer_wrapper import BaseModelWrapper
+from models.transformers.atstframe.audio_transformer import FrameASTModel
+from models.transformers.transformer_wrapper import BaseModelWrapper
 
 
 class ATSTWrapper(BaseModelWrapper):

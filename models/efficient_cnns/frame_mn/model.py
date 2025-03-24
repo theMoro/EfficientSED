@@ -8,8 +8,8 @@ from torch import nn, Tensor
 from torch.hub import load_state_dict_from_url
 from torchvision.ops.misc import ConvNormActivation
 
-from models.frame_mn.block_types import InvertedResidualConfig, InvertedResidual
-from models.frame_mn.utils import cnn_out_size
+from models.efficient_cnns.frame_mn.block_types import InvertedResidualConfig, InvertedResidual
+from models.efficient_cnns.frame_mn.utils import cnn_out_size
 
 # Adapted version of MobileNetV3 pytorch implementation
 # https://github.com/pytorch/vision/blob/main/torchvision/models/mobilenetv3.py
@@ -193,6 +193,31 @@ class MN(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
+
+    def layerwise_lr_decay(self, lr, lr_decay):
+        blocks = [name for name, _ in self.named_parameters() if name.startswith("features")]
+        all_layers = blocks
+        all_layers.reverse()
+
+        parameters = []
+        info = []
+        prev_group_name = ".".join(all_layers[0].split('.')[:2])
+
+        # store params & learning rates
+        for idx, name in enumerate(all_layers):
+            cur_group_name = ".".join(name.split('.')[:2])
+
+            # update learning rate
+            if cur_group_name != prev_group_name:
+                lr *= lr_decay
+            prev_group_name = cur_group_name
+
+            # append layer parameters
+            parameters += [{'params': [p for n, p in self.named_parameters() if n == name and p.requires_grad],
+                            'lr': lr}]
+            info.append(f"{name}: lr={lr:.6f}")
+
+        return parameters
 
     def load_model(self, path, wandb_id):
         ckpt_path = os.path.join(path, wandb_id + ".ckpt")
