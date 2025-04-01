@@ -8,8 +8,8 @@ from torch import nn, Tensor
 from torch.hub import load_state_dict_from_url
 from torchvision.ops.misc import ConvNormActivation
 
-from models.efficient_cnns.frame_mn.block_types import InvertedResidualConfig, InvertedResidual
-from models.efficient_cnns.frame_mn.utils import cnn_out_size
+from models.efficient_cnns.fmn.block_types import InvertedResidualConfig, InvertedResidual
+from models.efficient_cnns.fmn.utils import cnn_out_size
 
 # Adapted version of MobileNetV3 pytorch implementation
 # https://github.com/pytorch/vision/blob/main/torchvision/models/mobilenetv3.py

@@ -32,10 +32,12 @@ def init_hf_config(max_shard_size="2GB", verbose=True, in_mem_max=None):
 
 def get_hf_local_path(path, local_datasets_path=None):
     if local_datasets_path is None:
-        local_datasets_path = os.environ.get(
-            "HF_DATASETS_LOCAL",
-            os.path.join(os.environ.get("HF_DATASETS_CACHE"), "../local"),
-        )
+        # local_datasets_path = os.environ.get(
+        #     "HF_DATASETS_LOCAL",
+        #     os.path.join(os.environ.get("HF_DATASETS_CACHE"), "../local"),
+        # )
+        os.environ["HF_DATASETS_CACHE"] = "/opt/scratch/HF_datasets/cache/"
+        local_datasets_path = "/opt/scratch/HF_datasets/local/"
     path = os.path.join(local_datasets_path, path)
     return path
 

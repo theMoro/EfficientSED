@@ -6,33 +6,25 @@ from torch import Tensor
 
 
 def NAME_TO_WIDTH(name):
-    frame_mn_map = {
-        'frame_mn01': 0.1,
-        'frame_mn02': 0.2,
-        'frame_mn04': 0.4,
-        'frame_mn05': 0.5,
-        'frame_mn06': 0.6,
-        'frame_mn08': 0.8,
-        'frame_mn10': 1.0,
-        'frame_mn12': 1.2,
-        'frame_mn14': 1.4,
-        'frame_mn16': 1.6,
-        'frame_mn20': 2.0,
-        'frame_mn30': 3.0,
-        'frame_mn40': 4.0,
+    fmn_map = {
+        'fmn04': 0.4,
+        'fmn06': 0.6,
+        'fmn10': 1.0,
+        'fmn20': 2.0,
+        'fmn30': 3.0
     }
 
-    frame_dymn_map = {
-        'frame_dymn04': 0.4,
-        'frame_dymn10': 1.0,
-        'frame_dymn20': 2.0,
+    fdymn_map = {
+        'fdymn04': 0.4,
+        'fdymn10': 1.0,
+        'fdymn20': 2.0,
     }
 
     try:
-        if name.startswith('frame_dymn'):
-            w = frame_dymn_map[name[:len('frame_dymnxx')]]
+        if name.startswith('fdymn'):
+            w = fdymn_map[name[:len('fdymnxx')]]
         else:
-            w = frame_mn_map[name[:len('frame_mnxx')]]
+            w = fmn_map[name[:len('fmnxx')]]
     except:
         w = 1.0
 

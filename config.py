@@ -1,28 +1,37 @@
 RESOURCES_FOLDER = "resources"
-GITHUB_RELEASE_URL = "https://github.com/fschmid56/PretrainedSED/releases/download/v0.0.1/"
+GITHUB_RELEASE_URL_TRANSFORMERS = "https://github.com/fschmid56/PretrainedSED/releases/download/v0.0.1/"
+GITHUB_RELEASE_URL_CNNs = "https://github.com/theMoro/EfficientSED/releases/download/v0.0.1/"
 
 # checkpoints
 CHECKPOINT_URLS = {}
 
 # strong
-CHECKPOINT_URLS['BEATs_strong_1'] = GITHUB_RELEASE_URL + "BEATs_strong_1.pt"
-CHECKPOINT_URLS['ATST-F_strong_1'] = GITHUB_RELEASE_URL + "ATST-F_strong_1.pt"
-CHECKPOINT_URLS['ASIT_strong_1'] = GITHUB_RELEASE_URL + "ASIT_strong_1.pt"
-CHECKPOINT_URLS['fpasst_strong_1'] = GITHUB_RELEASE_URL + "fpasst_strong_1.pt"
-CHECKPOINT_URLS['M2D_strong_1'] = GITHUB_RELEASE_URL + "M2D_strong_1.pt"
-for width in ['06', '10']:
-    CHECKPOINT_URLS[f'frame_mn{width}_strong_1'] = GITHUB_RELEASE_URL + f'frame_mn{width}_strong_1.pt'
+CHECKPOINT_URLS['BEATs_strong_1'] = GITHUB_RELEASE_URL_TRANSFORMERS + "BEATs_strong_1.pt"
+CHECKPOINT_URLS['ATST-F_strong_1'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ATST-F_strong_1.pt"
+CHECKPOINT_URLS['ASIT_strong_1'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ASIT_strong_1.pt"
+CHECKPOINT_URLS['fpasst_strong_1'] = GITHUB_RELEASE_URL_TRANSFORMERS + "fpasst_strong_1.pt"
+CHECKPOINT_URLS['M2D_strong_1'] = GITHUB_RELEASE_URL_TRANSFORMERS + "M2D_strong_1.pt"
+
+for width in ['04', '06', '10', '20', '30']:
+    CHECKPOINT_URLS[f'fmn{width}_strong'] = GITHUB_RELEASE_URL_CNNs + f'fmn{width}_strong.pt'
+
+    for seq_model in ['bigru', 'hybrid', 'tf']:
+        for seq_model_dim in ['128', '256', '512', '1024']:
+            CHECKPOINT_URLS[f'fmn{width}+{seq_model}-{seq_model_dim}_strong'] = GITHUB_RELEASE_URL_CNNs + f'fmn{width}+{seq_model}-{seq_model_dim}_strong.pt'
 
 # weak
-CHECKPOINT_URLS['BEATs_weak'] = GITHUB_RELEASE_URL + "BEATs_weak.pt"
-CHECKPOINT_URLS['ATST-F_weak'] = GITHUB_RELEASE_URL + "ATST-F_weak.pt"
-CHECKPOINT_URLS['ASIT_weak'] = GITHUB_RELEASE_URL + "ASIT_weak.pt"
-CHECKPOINT_URLS['fpasst_weak'] = GITHUB_RELEASE_URL + "fpasst_weak.pt"
-CHECKPOINT_URLS['M2D_weak'] = GITHUB_RELEASE_URL + "M2D_weak.pt"
+CHECKPOINT_URLS['BEATs_weak'] = GITHUB_RELEASE_URL_TRANSFORMERS + "BEATs_weak.pt"
+CHECKPOINT_URLS['ATST-F_weak'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ATST-F_weak.pt"
+CHECKPOINT_URLS['ASIT_weak'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ASIT_weak.pt"
+CHECKPOINT_URLS['fpasst_weak'] = GITHUB_RELEASE_URL_TRANSFORMERS + "fpasst_weak.pt"
+CHECKPOINT_URLS['M2D_weak'] = GITHUB_RELEASE_URL_TRANSFORMERS + "M2D_weak.pt"
+
+for width in ['04', '06', '10', '20', '30']:
+    CHECKPOINT_URLS[f'fmn{width}_weak'] = GITHUB_RELEASE_URL_CNNs + f'fmn{width}_weak.pt'
 
 # ssl
-CHECKPOINT_URLS['BEATs_ssl'] = GITHUB_RELEASE_URL + "BEATs_ssl.pt"
-CHECKPOINT_URLS['ATST-F_ssl'] = GITHUB_RELEASE_URL + "ATST-F_ssl.pt"
-CHECKPOINT_URLS['ASIT_ssl'] = GITHUB_RELEASE_URL + "ASIT_ssl.pt"
-CHECKPOINT_URLS['fpasst_ssl'] = GITHUB_RELEASE_URL + "fpasst_ssl.pt"
-CHECKPOINT_URLS['M2D_ssl'] = GITHUB_RELEASE_URL + "M2D_ssl.pt"
+CHECKPOINT_URLS['BEATs_ssl'] = GITHUB_RELEASE_URL_TRANSFORMERS + "BEATs_ssl.pt"
+CHECKPOINT_URLS['ATST-F_ssl'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ATST-F_ssl.pt"
+CHECKPOINT_URLS['ASIT_ssl'] = GITHUB_RELEASE_URL_TRANSFORMERS + "ASIT_ssl.pt"
+CHECKPOINT_URLS['fpasst_ssl'] = GITHUB_RELEASE_URL_TRANSFORMERS + "fpasst_ssl.pt"
+CHECKPOINT_URLS['M2D_ssl'] = GITHUB_RELEASE_URL_TRANSFORMERS + "M2D_ssl.pt"

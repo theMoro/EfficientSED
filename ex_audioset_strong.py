@@ -25,9 +25,8 @@ from data_util.audioset_strong import get_training_dataset, get_eval_dataset
 from data_util.audioset_strong import get_temporal_count_balanced_sample_weights, get_uniform_sample_weights, \
     get_weighted_sampler
 from data_util.audioset_classes import as_strong_train_classes, as_strong_eval_classes
-from models.efficient_cnns.frame_mn.frame_mn_wrapper import FrameMNWrapper
-from models.efficient_cnns.frame_mn.utils import NAME_TO_WIDTH
-from models.wrapper import Wrapper
+from models.efficient_cnns.fmn.fmn_wrapper import FrameMNWrapper
+from models.efficient_cnns.fmn.utils import NAME_TO_WIDTH
 
 
 class PLModule(pl.LightningModule):
@@ -36,48 +35,75 @@ class PLModule(pl.LightningModule):
         self.config = config
         self.encoder = encoder
 
-        if config.pretrained == "scratch":
-            checkpoint = None
-        elif config.pretrained == "ssl":
-            checkpoint = "ssl"
-        elif config.pretrained == "weak":
-            checkpoint = "weak"
-        elif config.pretrained == "strong":
-            checkpoint = "strong_1"
+        if config.model_name in ["BEATs", "ATST-F", "fpasst", "M2D", "ASIT"]:
+            if config.pretrained == "scratch":
+                checkpoint = None
+            elif config.pretrained == "ssl":
+                checkpoint = "ssl"
+            elif config.pretrained == "weak":
+                checkpoint = "weak"
+            elif config.pretrained == "strong":
+                checkpoint = "strong_1"
+            else:
+                raise ValueError(f"Unknown pretrained checkpoint: {config.pretrained}")
+        elif config.model_name.startswith("fmn"):
+            if config.pretrained in ["weak", "strong"]:
+                checkpoint = config.pretrained
+            elif config.pretrained == "scratch":
+                checkpoint = None
+            else: raise ValueError(f"Invalid configuration for fmn model: config.pretrained={config.pretrained}")
         else:
-            raise ValueError(f"Unknown pretrained checkpoint: {config.pretrained}")
+            raise ValueError(f"Invalid model_name!")
 
         # load transformer model
+        # as PretrainedSED provides checkpoints for pretrained transformers WITHOUT a sequence model on top of it,
+        # we load the pretrained model transformer, throw away its head and initialize the sequence model and the new head (transformer -> seq_model -> head)
+        # --> only the transformer model is pretrained (if checkpoint is not None), the sequence model and the head are trained from scratch
         if config.model_name == "BEATs":
             beats = BEATsWrapper()
             model = PredictionsWrapper(beats, checkpoint=f"BEATs_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
         elif config.model_name == "ATST-F":
             atst = ATSTWrapper()
             model = PredictionsWrapper(atst, checkpoint=f"ATST-F_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
         elif config.model_name == "fpasst":
             fpasst = FPaSSTWrapper()
             model = PredictionsWrapper(fpasst, checkpoint=f"fpasst_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
         elif config.model_name == "M2D":
             m2d = M2DWrapper()
             model = PredictionsWrapper(m2d, checkpoint=f"M2D_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
-                                       embed_dim=m2d.m2d.cfg.feature_d)
+                                       embed_dim=m2d.m2d.cfg.feature_d,
+                                       seq_model_dim=2048)
         elif config.model_name == "ASIT":
             asit = ASiTWrapper()
             model = PredictionsWrapper(asit, checkpoint=f"ASIT_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
         # or load CNN model
+        # If config.pretrained == "strong", we load models (with or without sequence model on top) pretrained on AudioSet Strong --> sequence model is pretrained
+        # If config.pretrained == "weak", we load models WITHOUT a sequence model pretrained on AudioSet Weak --> sequence model is trained from scratch
         elif config.model_name.startswith("fmn"):
             width = NAME_TO_WIDTH(config.model_name)
-            frame_mn = FrameMNWrapper(width)
-            embed_dim = frame_mn.state_dict()['frame_mn.features.16.1.bias'].shape[0]  # TODO: check that: frame_mn or fmn
-            model = Wrapper(
-                            frame_mn,
-                            checkpoint=f"{config.model_name}_strong_1" if checkpoint else None,
+            fmn = FrameMNWrapper(width)
+            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]  # TODO: check if it works
+
+            # build checkpoint name
+            checkpoint_name = None
+
+            if checkpoint:
+                seq_model_name = ""
+                if config.seq_model_type and checkpoint == "strong":  # sequence models are only used for training on AS Strong
+                    seq_model_name = f"+{config.seq_model_type}-{config.seq_model_dim}"
+
+                checkpoint_name = f"{config.model_name}{seq_model_name}_{checkpoint}"
+
+            model = PredictionsWrapper(
+                            fmn,
+                            checkpoint=checkpoint_name,
                             seq_model_type=config.seq_model_type,
+                            seq_model_dim=config.seq_model_dim,
                             embed_dim=embed_dim
                             )
         else:
@@ -107,7 +133,7 @@ class PLModule(pl.LightningModule):
     def get_optimizer(
             self, lr, adamw=False, weight_decay=0.01, betas=(0.9, 0.999)
     ):
-        # we split the parameters into two groups, one for the pretrained model and one for the downstream model
+        # we split the parameters into two groups, one for the backbone model (transformer or CNN) and one for the sequence model
         # we also split each of them into <=1 dimensional and >=2 dimensional parameters, so we can only
         # apply weight decay to the >=2 dimensional parameters, thus excluding biases and batch norms, an idea from NanoGPT
         params_leq1D = []
@@ -365,8 +391,8 @@ def train(config):
 
     # logging is done using wandb
     wandb_logger = WandbLogger(
-        project="PTSED",
-        notes="Pre-Training Transformers for Sound Event Detection on AudioSet Strong.",
+        project="EfficientSED",
+        notes="Training efficient models for Sound Event Detection on AudioSet Strong.",
         tags=["AudioSet Strong", "Sound Event Detection", "Pseudo Labels", "Knowledge Distillation"],
         config=config,
         name=config.experiment_name
@@ -403,7 +429,7 @@ def train(config):
     # create pytorch lightening module
     pl_module = PLModule(config, encoder)
 
-    # create the pytorch lightening trainer by specifying the number of epochs to train, the logger,
+    # create the pytorch lightning trainer by specifying the number of epochs to train, the logger,
     # on which kind of device(s) to train and possible callbacks
     trainer = pl.Trainer(max_epochs=config.n_epochs,
                          logger=wandb_logger,
@@ -456,7 +482,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--num_workers', type=int, default=16)
     parser.add_argument('--num_devices', type=int, default=1)
-    parser.add_argument('--precision', type=int, default=16)
+    parser.add_argument('--precision', type=int, default=16)  # for Mamba, use "16-mixed"
     parser.add_argument('--evaluate', action='store_true', default=False)
     parser.add_argument('--check_val_every_n_epoch', type=int, default=5)
 
@@ -471,8 +497,9 @@ if __name__ == '__main__':
     # "strong" = AudioSet Strong pre-trained
     parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong"],
                         default="weak")
-    parser.add_argument('--seq_model_type', type=str, choices=["gru"],
+    parser.add_argument('--seq_model_type', type=str, choices=[None, "gru", "attn", "tf", "mamba", "tcn", "hybrid"],
                         default=None)
+    parser.add_argument('--seq_model_dim', type=int, choices=[128, 256, 512, 1024], default=256)
 
     # training
     parser.add_argument('--n_epochs', type=int, default=30)

@@ -1,6 +1,6 @@
 from models.transformers.frame_passt.preprocess import AugmentMelSTFT
 from models.transformers.transformer_wrapper import BaseModelWrapper
-from models.efficient_cnns.frame_mn.model import get_model
+from models.efficient_cnns.fmn.model import get_model
 
 
 class FrameMNWrapper(BaseModelWrapper):
@@ -26,7 +26,7 @@ class FrameMNWrapper(BaseModelWrapper):
             periodic_window=False,
         )
 
-        self.frame_mn = get_model(
+        self.fmn = get_model(
             width_mult=width_mult
         )
 
@@ -34,7 +34,7 @@ class FrameMNWrapper(BaseModelWrapper):
         return self.mel(x)
 
     def forward(self, x):
-        return self.frame_mn(x)
+        return self.fmn(x)
 
     def separate_params(self):
         pt_params = [[], [], [], [], [], [], [], [], [], [], [], []]

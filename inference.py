@@ -10,9 +10,9 @@ from models.transformers.beats.BEATs_wrapper import BEATsWrapper
 from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
 from models.transformers.m2d.M2D_wrapper import M2DWrapper
 from models.transformers.asit.ASIT_wrapper import ASiTWrapper
-from models.efficient_cnns.frame_mn.frame_mn_wrapper import FrameMNWrapper
+from models.efficient_cnns.fmn.fmn_wrapper import FrameMNWrapper
 from models.transformers.prediction_wrapper import PredictionsWrapper
-from models.efficient_cnns.frame_mn.utils import NAME_TO_WIDTH
+from models.efficient_cnns.fmn.utils import NAME_TO_WIDTH
 
 
 def sound_event_detection(args):
@@ -37,11 +37,25 @@ def sound_event_detection(args):
     elif model_name == "ASIT":
         asit = ASiTWrapper()
         model = PredictionsWrapper(asit, checkpoint="ASIT_strong_1")
-    elif model_name.startswith("frame_mn"):
+    elif model_name.startswith("fmn"):
         width = NAME_TO_WIDTH(model_name)
-        frame_mn = FrameMNWrapper(width)
-        embed_dim = frame_mn.state_dict()['frame_mn.features.16.1.bias'].shape[0]
-        model = PredictionsWrapper(frame_mn, checkpoint=f"{model_name}_strong_1", embed_dim=embed_dim)
+        fmn = FrameMNWrapper(width)
+        embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]
+
+        # build checkpoint name
+        seq_model_name = ""
+        if args.seq_model_type:
+            seq_model_name = f"+{args.seq_model_type}-{args.seq_model_dim}"
+
+        checkpoint_name = f"{model_name}{seq_model_name}_strong"
+
+        model = PredictionsWrapper(
+            fmn,
+            checkpoint=checkpoint_name,
+            seq_model_type=args.seq_model_type,
+            seq_model_dim=args.seq_model_dim,
+            embed_dim=embed_dim
+        )
     else:
         raise NotImplementedError(f"Model {model_name} not (yet) implemented")
 
@@ -113,8 +127,14 @@ def sound_event_detection(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Example of parser. ')
-    # model names: [BEATs, ASIT, ATST-F, fpasst, M2D]
-    parser.add_argument('--model_name', type=str, default='BEATs')
+    # model names: [fmn04, fmn06, fmn10, fmn20, fmn30, BEATs, ASIT, ATST-F, fpasst, M2D]
+    parser.add_argument('--model_name', type=str,
+                        choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"] + \
+                                [f"fmn{width}" for width in ["04", "06", "10", "20", "30"]],
+                        default='fmn10')
+    parser.add_argument('--seq_model_type', type=str, choices=[None, "gru", "attn", "tf", "mamba", "tcn", "hybrid"],
+                        default=None)
+    parser.add_argument('--seq_model_dim', type=int, choices=[128, 256, 512, 1024], default=256)
     parser.add_argument('--audio_file', type=str,
                         default='test_files/752547__iscence__milan_metro_coming_in_station.wav')
     parser.add_argument('--detection_thresholds', type=float, default=(0.1, 0.2, 0.5))
@@ -122,5 +142,5 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', action='store_true', default=False)
     args = parser.parse_args()
 
-    assert args.model_name in ["BEATs", "ASIT", "ATST-F", "fpasst", "M2D"] or args.model_name.startswith("frame_mn")
+    assert args.model_name in ["BEATs", "ASIT", "ATST-F", "fpasst", "M2D"] or args.model_name.startswith("fmn")
     sound_event_detection(args)
