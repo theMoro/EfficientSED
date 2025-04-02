@@ -47,7 +47,7 @@ def sound_event_detection(args):
         if args.seq_model_type:
             seq_model_name = f"+{args.seq_model_type}-{args.seq_model_dim}"
 
-        checkpoint_name = f"{model_name}{seq_model_name}_strong"
+        checkpoint_name = f"{model_name}{seq_model_name}_{args.pretrained}"
 
         model = PredictionsWrapper(
             fmn,
@@ -132,9 +132,11 @@ if __name__ == "__main__":
                         choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"] + \
                                 [f"fmn{width}" for width in ["04", "06", "10", "20", "30"]],
                         default='fmn10')
+    parser.add_argument('--pretrained', type=str, choices=["strong", "advanced-kd-weak-strong"],
+                        default="strong")
     parser.add_argument('--seq_model_type', type=str, choices=[None, "gru", "attn", "tf", "mamba", "tcn", "hybrid"],
                         default=None)
-    parser.add_argument('--seq_model_dim', type=int, choices=[128, 256, 512, 1024], default=256)
+    parser.add_argument('--seq_model_dim', type=int, default=256)
     parser.add_argument('--audio_file', type=str,
                         default='test_files/752547__iscence__milan_metro_coming_in_station.wav')
     parser.add_argument('--detection_thresholds', type=float, default=(0.1, 0.2, 0.5))
@@ -143,4 +145,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     assert args.model_name in ["BEATs", "ASIT", "ATST-F", "fpasst", "M2D"] or args.model_name.startswith("fmn")
+
+    if args.pretrained == "advanced-kd-weak-strong":
+        assert args.model_name.startswith("fmn"), "Advanced KD is only available for fmn models"
+
     sound_event_detection(args)

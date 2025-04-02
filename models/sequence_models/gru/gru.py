@@ -15,7 +15,7 @@ class GRU(nn.Module):
         """
 
         super(GRU, self).__init__()
-        self.rnn = nn.GRU(
+        self.gru = nn.GRU(
             n_in,
             n_hidden,
             bidirectional=bidirectional,
@@ -25,5 +25,5 @@ class GRU(nn.Module):
         )
 
     def forward(self, input_feat):
-        recurrent, _ = self.rnn(input_feat)
+        recurrent, _ = self.gru(input_feat)
         return recurrent

@@ -26,6 +26,35 @@ The code of this repository is based on [PretrainedSED](https://github.com/fschm
 
 ---
 
+# Setting up the Environment
+
+1. If needed, create a new environment with python 3.9 and activate it:
+
+```bash
+conda create -n efficient_sed python=3.11
+conda activate efficient_sed
+ ```
+
+2. Install pytorch build that suits your system. For example:
+
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# or for cuda >= 12.1
+pip3 install torch torchvision torchaudio 
+```
+
+3. Install the requirements:
+
+ ```bash
+pip3 install -r requirements.txt
+ ```
+
+4. Install package for mp3 decoding:
+
+``` bash
+CFLAGS='-O3 -march=native' pip install https://github.com/f0k/minimp3py/archive/master.zip
+```
+
 
 ### ! Repository in process !
 
@@ -35,13 +64,14 @@ This repository is in process and will be updated with the pre-trained models an
 
 **TODO:**
 - [x] Add code for all the sequence models.
-- [ ] Add code for training the efficient CNNs on AudioSet Strong.
-- [ ] Fix the load_state_dict method in wrapper.py to work for all sequence models and both the Audio Transformers and the Efficient CNNs.
-- [ ] Merge the two Wrapper classes for the Audio Transformers and the Efficient CNNs.
+- [x] Add code for training the efficient CNNs on AudioSet Strong.
+- [x] Merge the two Wrapper classes for the Audio Transformers and the Efficient CNNs.
 - [ ] Add file to train the efficient models using the "Online Teacher KD" setup. 
-- [ ] Add pre-trained models.
-- [ ] Check inference.py for the efficient models.
+- [x] Add pre-trained models.
+- [x] Check inference.py for the efficient models.
 - [ ] Add plots from the paper to the README file. 
+- [ ] Adapt ex_dcase2016task2.py to work with the efficient models.
+- [x] Update requirements.txt
 
 
 

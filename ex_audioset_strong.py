@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import torch
@@ -47,7 +49,7 @@ class PLModule(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown pretrained checkpoint: {config.pretrained}")
         elif config.model_name.startswith("fmn"):
-            if config.pretrained in ["weak", "strong"]:
+            if config.pretrained in ["weak", "strong", "advanced-kd-weak-strong"]:
                 checkpoint = config.pretrained
             elif config.pretrained == "scratch":
                 checkpoint = None
@@ -94,7 +96,7 @@ class PLModule(pl.LightningModule):
 
             if checkpoint:
                 seq_model_name = ""
-                if config.seq_model_type and checkpoint == "strong":  # sequence models are only used for training on AS Strong
+                if config.seq_model_type and checkpoint in ["strong", "advanced-kd-weak-strong"]:  # sequence models are only used for training on AS Strong
                     seq_model_name = f"+{config.seq_model_type}-{config.seq_model_dim}"
 
                 checkpoint_name = f"{config.model_name}{seq_model_name}_{checkpoint}"
@@ -437,7 +439,8 @@ def train(config):
                          devices=config.num_devices,
                          precision=config.precision,
                          num_sanity_val_steps=0,
-                         check_val_every_n_epoch=config.check_val_every_n_epoch
+                         check_val_every_n_epoch=config.check_val_every_n_epoch,
+                         accumulate_grad_batches=config.accumulate_grad_batches
                          )
 
     # start training and validation for the specified number of epochs
@@ -468,7 +471,9 @@ def evaluate(config):
                          devices=config.num_devices,
                          precision=config.precision,
                          num_sanity_val_steps=0,
-                         check_val_every_n_epoch=config.check_val_every_n_epoch)
+                         check_val_every_n_epoch=config.check_val_every_n_epoch,
+                         accumulate_grad_batches=config.accumulate_grad_batches
+                         )
 
     # start evaluation
     trainer.validate(pl_module, eval_dl)
@@ -479,10 +484,11 @@ if __name__ == '__main__':
 
     # general
     parser.add_argument('--experiment_name', type=str, default="AudioSet_Strong")
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--accumulate_grad_batches', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=16)
     parser.add_argument('--num_devices', type=int, default=1)
-    parser.add_argument('--precision', type=int, default=16)  # for Mamba, use "16-mixed"
+    parser.add_argument('--precision', type=int, default=16)
     parser.add_argument('--evaluate', action='store_true', default=False)
     parser.add_argument('--check_val_every_n_epoch', type=int, default=5)
 
@@ -495,26 +501,27 @@ if __name__ == '__main__':
     # "ssl" = SSL pre-trained
     # "weak" = AudioSet Weak pre-trained
     # "strong" = AudioSet Strong pre-trained
-    parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong"],
+    # "advanced-kd-weak-strong" = pre-trained using advanced KD on AudioSet Weak and Strong as described in Section IV.D in the paper
+    parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong", "advanced-kd-weak-strong"],
                         default="weak")
     parser.add_argument('--seq_model_type', type=str, choices=[None, "gru", "attn", "tf", "mamba", "tcn", "hybrid"],
                         default=None)
-    parser.add_argument('--seq_model_dim', type=int, choices=[128, 256, 512, 1024], default=256)
+    parser.add_argument('--seq_model_dim', type=int, default=256)
 
     # training
-    parser.add_argument('--n_epochs', type=int, default=30)
+    parser.add_argument('--n_epochs', type=int, default=120)
     parser.add_argument('--use_balanced_sampler', action='store_true', default=False)
     parser.add_argument('--distillation_loss_weight', type=float, default=0.0)
-    parser.add_argument('--epoch_len', type=int, default=100000)
+    parser.add_argument('--epoch_len', type=int, default=100_000)
     parser.add_argument('--median_window', type=int, default=9)
 
     # augmentation
-    parser.add_argument('--wavmix_p', type=float, default=0.8)
-    parser.add_argument('--freq_warp_p', type=float, default=0.8)
-    parser.add_argument('--filter_augment_p', type=float, default=0.8)
+    parser.add_argument('--wavmix_p', type=float, default=0.5)
+    parser.add_argument('--freq_warp_p', type=float, default=0.0)
+    parser.add_argument('--filter_augment_p', type=float, default=0.0)
     parser.add_argument('--frame_shift_range', type=float, default=0.125)  # in seconds
     parser.add_argument('--mixup_p', type=float, default=0.3)
-    parser.add_argument('--mixstyle_p', type=float, default=0.3)
+    parser.add_argument('--mixstyle_p', type=float, default=0.0)
     parser.add_argument('--max_time_mask_size', type=float, default=0.0)
 
     # optimizer
@@ -523,7 +530,9 @@ if __name__ == '__main__':
 
     # lr schedule
     parser.add_argument('--schedule_mode', type=str, default="cos")
-    parser.add_argument('--max_lr', type=float, default=7e-5)
+
+    ## 8e-4 or 3e-3 for AS Strong / 1e-3, 3e-3 or 6e-3 for AS Weak
+    parser.add_argument('--max_lr', type=float, default=8e-4)
     parser.add_argument('--lr_end', type=float, default=2e-7)
     parser.add_argument('--warmup_steps', type=int, default=5000)
 
@@ -533,6 +542,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.evaluate:
+        assert args.pretrained in ["strong", "advanced-kd-weak-strong"], "Evaluation is only possible for models pretrained on AudioSet Strong."
         evaluate(args)
     else:
+        if args.seq_model_type == "mamba":
+            # Mamba requires 16-mixed precision for stable training
+            warnings.warn("Using Mamba requires 16-mixed precision for stable training. Setting precision to 16-mixed.")
+            args.precision = "16-mixed"
+
         train(args)

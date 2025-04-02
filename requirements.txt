@@ -13,7 +13,9 @@ hf-fastup>=0.0.5
 datasets>=2.15.0
 pytorch-lightning>=2.0.0
 wandb
-transformers
+transformers==4.28.0
 sed_scores_eval==0.0.3
 intervaltree
 more-itertools
+triton==2.1.0
+mamba-ssm

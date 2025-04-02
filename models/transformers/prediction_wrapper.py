@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import torch
 import torch.nn as nn
@@ -9,7 +10,7 @@ from config import RESOURCES_FOLDER, CHECKPOINT_URLS
 from models.sequence_models.helper import init_weights
 
 # sequence models
-# from mamba_ssm import Mamba2
+from mamba_ssm import Mamba2
 
 from models.sequence_models.multi_layer_model import MultiLayerModel, MultiLayerModelFp32
 from models.sequence_models.tcn.tcn import TemporalConvNet
@@ -23,10 +24,10 @@ FIRST_RUN = True
 
 class PredictionsWrapper(nn.Module):
     """
-        A wrapper module that adds an optional sequence model and classification heads on top of a base model (CNN).
+        A wrapper module that adds an optional sequence model and classification heads on top of a base model (CNN or Transformers).
 
         Args:
-            base_model (nn.Module): The base model (CNN) providing sequence embeddings
+            base_model (nn.Module): The base model (CNN or a Transformer) providing sequence embeddings
             checkpoint (str, optional): checkpoint name for loading pre-trained weights. Default is None.
             n_classes_strong (int): Number of classes for strong predictions. Default is 447.
             n_classes_weak (int, optional): Number of classes for weak predictions. Default is None,
@@ -48,12 +49,12 @@ class PredictionsWrapper(nn.Module):
             attn_drop (float, optional): Dropout rate for self-attention layers. Default is 0.0.
             attn_gating (bool, optional): Whether to use gating in self-attention. Default is True.
 
-            tf_heads (int, optional): Number of attention heads in each transformer layer. Default is 8.
+            tf_heads (int, optional): Number of attention heads in each transformer block. Default is 8.
             tf_head_dim (int, optional): Dimension of each attention head. If None, tf_dim // tf_heads is used. Default is None.
-            tf_pos_encoding_type (str, optional): Type of positional encoding to use in transformer. Default is "rotary".
-            tf_drop (float, optional): Dropout rate for transformer layers. Default is 0.2.
-            tf_ff_mult (int, optional): Feedforward multiplier in transformer. Default is 4.
-            tf_gating (bool, optional): Whether to use gating in transformer. Default is True.
+            tf_pos_encoding_type (str, optional): Type of positional encoding to use in transformer blocks. Default is "rotary".
+            tf_drop (float, optional): Dropout rate for transformer blocks. Default is 0.2.
+            tf_ff_mult (int, optional): Feedforward multiplier in transformer blocks. Default is 4.
+            tf_gating (bool, optional): Whether to use gating in transformer blocks. Default is True.
 
             mamba_d_state (int, optional): Dimension of the state variable in Mamba model. Default is 64.
 
@@ -118,13 +119,18 @@ class PredictionsWrapper(nn.Module):
         self.head_type = head_type
 
         # sequence model
+        if seq_model_dim < 104:
+            warnings.warn("The implementations of the sequence models were not tested for seq_model_dim < 104.")
 
         ## transformer blocks
         if self.seq_model_type == "tf":
             tf_dim = seq_model_dim
             tf_layers = seq_model_layers
 
-            assert tf_dim >= 128, "transformer_block might not be implemented correctly for tf_dim < 128"
+            if tf_dim < 128:
+                warnings.warn("transformer blocks might not be implemented correctly for tf_dim < 128. \nSetting tf_heads to 4.")
+                tf_heads = 4
+
             assert (
                     tf_dim % tf_heads == 0
             ), "tf_dim must be divisible by tf_heads"
@@ -155,7 +161,6 @@ class PredictionsWrapper(nn.Module):
             attn_dim = seq_model_dim
             attn_layers = seq_model_layers
 
-            assert attn_dim >= 128, "attention might not be implemented correctly for attn_dim < 128"
             assert (
                     attn_dim % attn_heads == 0
             ), "attn_dim must be divisible by attn_heads"
@@ -203,8 +208,6 @@ class PredictionsWrapper(nn.Module):
         elif self.seq_model_type == "mamba":
             mamba_dim = seq_model_dim
             mamba_layers = seq_model_layers
-
-            assert mamba_dim >= 128, "Mamba might not be implemented correctly for mamba_dim < 128"
 
             headdim = 32 if mamba_dim == 128 else 64  # we need to use headdim=32 if mamba_dim=128
 
@@ -312,7 +315,6 @@ class PredictionsWrapper(nn.Module):
             download_url_to_file(CHECKPOINT_URLS[checkpoint], ckpt_file)
         state_dict = torch.load(ckpt_file, map_location="cpu", weights_only=True)
 
-        # TODO: add support for loading fmn models
         # compatibility with uniform wrapper structure we introduced for the public repo
         if 'fpasst' in checkpoint:
             state_dict = {("model.fpasst." + k[len("model."):] if k.startswith("model.")
