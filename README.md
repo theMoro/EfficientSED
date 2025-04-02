@@ -55,8 +55,30 @@ pip3 install -r requirements.txt
 CFLAGS='-O3 -march=native' pip install https://github.com/f0k/minimp3py/archive/master.zip
 ```
 
+# Inference
 
-### ! Repository in process !
+The script `inference.py` can be used to load a pre-trained model and run sound event detection on a single audio file of arbitrary length.
+
+```python
+python inference.py --cuda --model_name="fmn10" --audio_file="test_files/752547__iscence__milan_metro_coming_in_station.wav"
+```
+
+The argument ```model_name``` specifies the model (a CNN or a transformer, e.g., fmn10 or BEATs) used for inference, and the corresponding pre-trained model checkpoint
+is automatically downloaded and placed in the folder [resources](resources).
+
+```python
+python inference.py --cuda --model_name="fmn10" --seq_model_type="tf" --seq_model_dim=256 --audio_file="test_files/752547__iscence__milan_metro_coming_in_station.wav"
+```
+
+The argument ```seq_model_type``` specifies the sequence model in the dimension ```seq_model_dim``` placed on top of 
+the specified model for the training on AudioSet Strong.
+
+The argument ```audio_file``` specifies the path to a single audio file. There is one [example file](test_files/752547__iscence__milan_metro_coming_in_station.wav) included. 
+More example files can be downloaded from the [GitHub release](https://github.com/fschmid56/PretrainedSED/releases/tag/v0.0.1).
+
+
+
+# ! Repository in process !
 
 This repository is in process and will be updated with the pre-trained models and the code for training the efficient models in the next few weeks.
 
@@ -66,7 +88,7 @@ This repository is in process and will be updated with the pre-trained models an
 - [x] Add code for all the sequence models.
 - [x] Add code for training the efficient CNNs on AudioSet Strong.
 - [x] Merge the two Wrapper classes for the Audio Transformers and the Efficient CNNs.
-- [ ] Add file to train the efficient models using the "Online Teacher KD" setup. 
+- [ ] Add file to train the efficient models using the "Advanced KD" setup. 
 - [x] Add pre-trained models.
 - [x] Check inference.py for the efficient models.
 - [ ] Add plots from the paper to the README file. 
