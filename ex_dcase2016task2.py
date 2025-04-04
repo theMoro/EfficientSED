@@ -22,7 +22,7 @@ from models.transformers.atstframe.ATSTF_wrapper import ATSTWrapper
 from models.transformers.beats.BEATs_wrapper import BEATsWrapper
 from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
 from models.transformers.m2d.M2D_wrapper import M2DWrapper
-from models.transformers.prediction_wrapper import PredictionsWrapper
+from models.prediction_wrapper import PredictionsWrapper
 
 
 class PLModule(pl.LightningModule):

@@ -49,7 +49,18 @@ pip3 install torch torchvision torchaudio
 pip3 install -r requirements.txt
  ```
 
-4. Install package for mp3 decoding:
+4. If you intend on using the implemented Mamba code which uses the package _mamba-ssm_, run the following commands: 
+
+```bash
+pip install transformers==4.28.0
+pip install triton==2.1.0
+pip install mamba-ssm
+```
+
+Otherwise, you can skip this step and just comment out the import statement of _mamba-ssm_ in _models/prediction_wrapper.py_.
+
+
+5. Install package for mp3 decoding:
 
 ``` bash
 CFLAGS='-O3 -march=native' pip install https://github.com/f0k/minimp3py/archive/master.zip
@@ -78,9 +89,9 @@ More example files can be downloaded from the [GitHub release](https://github.co
 
 
 
-# ! Repository in process !
+# ! Repository in progress !
 
-This repository is in process and will be updated with the pre-trained models and the code for training the efficient models in the next few weeks.
+This repository is in progress and will be updated with the pre-trained models and the code for training the efficient models in the next few weeks.
 
 **Update:** Repository is constantly being updated - this is not the final version.
 

@@ -20,7 +20,7 @@ from models.transformers.beats.BEATs_wrapper import BEATsWrapper
 from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
 from models.transformers.m2d.M2D_wrapper import M2DWrapper
 from models.transformers.asit.ASIT_wrapper import ASiTWrapper
-from models.transformers.prediction_wrapper import PredictionsWrapper
+from models.prediction_wrapper import PredictionsWrapper
 from helpers.augment import frame_shift, time_mask, mixup, filter_augmentation, mixstyle, RandomResizeCrop
 from helpers.utils import worker_init_fn
 from data_util.audioset_strong import get_training_dataset, get_eval_dataset

@@ -14,9 +14,7 @@ datasets>=2.15.0
 pytorch-lightning>=2.0.0
 wandb
 rotary_embedding_torch
-transformers==4.28.0
+transformers
 sed_scores_eval==0.0.3
 intervaltree
 more-itertools
-triton==2.1.0
-mamba-ssm

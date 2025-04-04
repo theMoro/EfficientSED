@@ -11,7 +11,7 @@ from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
 from models.transformers.m2d.M2D_wrapper import M2DWrapper
 from models.transformers.asit.ASIT_wrapper import ASiTWrapper
 from models.efficient_cnns.fmn.fmn_wrapper import FrameMNWrapper
-from models.transformers.prediction_wrapper import PredictionsWrapper
+from models.prediction_wrapper import PredictionsWrapper
 from models.efficient_cnns.fmn.utils import NAME_TO_WIDTH
 
 
