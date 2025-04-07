@@ -133,25 +133,47 @@ class PLModule(pl.LightningModule):
         return y_strong
 
     def get_optimizer(
-            self, lr, adamw=False, weight_decay=0.01, betas=(0.9, 0.999)
+            self, lr, seq_lr, lr_decay=0.0, adamw=False, weight_decay=0.01, betas=(0.9, 0.999)
     ):
         # we split the parameters into two groups, one for the backbone model (transformer or CNN) and one for the sequence model
         # we also split each of them into <=1 dimensional and >=2 dimensional parameters, so we can only
         # apply weight decay to the >=2 dimensional parameters, thus excluding biases and batch norms, an idea from NanoGPT
-        params_leq1D = []
-        params_geq2D = []
+        backbone_model_params_leq1D = []
+        backbone_model_params_geq2D = []
+        seq_model_params_leq1D = []
+        seq_model_params_geq2D = []
+        n_scaled_layers = 0
 
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                if param.ndimension() >= 2:
-                    params_geq2D.append(param)
-                else:
-                    params_leq1D.append(param)
+        if seq_lr is None:
+            seq_lr = lr
 
-        param_groups = [
-            {'params': params_leq1D, 'lr': lr},
-            {'params': params_geq2D, 'lr': lr, 'weight_decay': weight_decay},
-        ]
+        if lr_decay != 0.0:
+            param_groups = self.model.model.layerwise_lr_decay(lr, lr_decay)
+            for name, param in self.model.named_parameters():
+                if not name.startswith('model.'):
+                    # sequence model + head
+                    param_groups.append({'params': param, 'lr': seq_lr})
+        else:
+            for name, param in self.model.named_parameters():
+                if param.requires_grad:
+                    if name.startswith('model.'):
+                        if param.ndimension() >= 2:
+                            backbone_model_params_geq2D.append(param)
+                        elif param.ndimension() <= 1:
+                            backbone_model_params_leq1D.append(param)
+                        n_scaled_layers += 1
+                    else:  # sequence model + head
+                        if param.ndimension() >= 2:
+                            seq_model_params_geq2D.append(param)
+                        elif param.ndimension() <= 1:
+                            seq_model_params_leq1D.append(param)
+
+            param_groups = [
+                {'params': pt_model_params_leq1D, 'lr': lr},  # backbone model
+                {'params': pt_model_params_geq2D, 'lr': lr, 'weight_decay': weight_decay},  # backbone model
+                {'params': ds_model_params_leq1D, 'lr': seq_lr},  # sequence model
+                {'params': ds_model_params_geq2D, 'lr': seq_lr, 'weight_decay': weight_decay}  # sequence model
+            ]
 
         if weight_decay > 0:
             assert adamw
@@ -195,7 +217,7 @@ class PLModule(pl.LightningModule):
         The specified items are used automatically in the optimization loop (no need to call optimizer.step() yourself).
         :return: dict containing optimizer and learning rate scheduler
         """
-        optimizer = self.get_optimizer(self.config.max_lr, adamw=self.config.adamw,
+        optimizer = self.get_optimizer(self.config.max_lr, self.config.seq_lr, self.config.lr_decay, adamw=self.config.adamw,
                                        weight_decay=self.config.weight_decay)
 
         num_training_steps = self.trainer.estimated_stepping_batches
@@ -531,8 +553,11 @@ if __name__ == '__main__':
     # lr schedule
     parser.add_argument('--schedule_mode', type=str, default="cos")
 
-    ## 8e-4 or 3e-3 for AS Strong / 1e-3, 3e-3 or 6e-3 for AS Weak
+    ## max_lr is for the convolutional backbone, seq_lr is for the sequence model
     parser.add_argument('--max_lr', type=float, default=8e-4)
+    parser.add_argument('--seq_lr', type=float, default=None)
+
+    parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--lr_end', type=float, default=2e-7)
     parser.add_argument('--warmup_steps', type=int, default=5000)
 
@@ -541,6 +566,7 @@ if __name__ == '__main__':
                         default=None)
 
     args = parser.parse_args()
+
     if args.evaluate:
         assert args.pretrained in ["strong", "advanced-kd-weak-strong"], "Evaluation is only possible for models pretrained on AudioSet Strong."
         evaluate(args)

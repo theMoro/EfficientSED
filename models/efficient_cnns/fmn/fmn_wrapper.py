@@ -30,6 +30,9 @@ class FrameMNWrapper(BaseModelWrapper):
             width_mult=width_mult
         )
 
+    def layerwise_lr_decay(self, lr, lr_decay):
+        return self.fmn.layerwise_lr_decay(lr, lr_decay)
+
     def mel_forward(self, x):
         return self.mel(x)
 
