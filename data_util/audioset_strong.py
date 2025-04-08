@@ -1,5 +1,4 @@
 import os
-from time import perf_counter
 import datasets
 import numpy as np
 import pandas as pd
@@ -19,6 +18,8 @@ from data_util.transforms import (
     target_transform
 )
 
+from data_util.utils import catchtime
+
 logger = datasets.logging.get_logger(__name__)
 
 
@@ -32,30 +33,15 @@ def init_hf_config(max_shard_size="2GB", verbose=True, in_mem_max=None):
 
 def get_hf_local_path(path, local_datasets_path=None):
     if local_datasets_path is None:
-        # local_datasets_path = os.environ.get(
-        #     "HF_DATASETS_LOCAL",
-        #     os.path.join(os.environ.get("HF_DATASETS_CACHE"), "../local"),
-        # )
-        os.environ["HF_DATASETS_CACHE"] = "/opt/scratch/HF_datasets/cache/"
-        local_datasets_path = "/opt/scratch/HF_datasets/local/"
+        hf_datasets_cache = os.environ.get("HF_DATASETS_CACHE")
+        os.makedirs(hf_datasets_cache, exist_ok=True)
+
+        local_datasets_path = os.environ.get(
+            "HF_DATASETS_LOCAL",
+            os.path.join(hf_datasets_cache, "../local"),
+        )
     path = os.path.join(local_datasets_path, path)
     return path
-
-
-class catchtime:
-    # context to measure loading time: https://stackoverflow.com/questions/33987060/python-context-manager-that-measures-time
-    def __init__(self, debug_print="Time", logger=logger):
-        self.debug_print = debug_print
-        self.logger = logger
-
-    def __enter__(self):
-        self.start = perf_counter()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.time = perf_counter() - self.start
-        readout = f"{self.debug_print}: {self.time:.3f} seconds"
-        self.logger.info(readout)
 
 
 def merge_overlapping_events(sample):

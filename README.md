@@ -115,7 +115,7 @@ _PSDS1_ refers to the mean macro-averaged PSDS1 score of the corresponding confi
 _Checkpoint Name_ refers to the respective names in our [GitHub release](https://github.com/theMoro/EfficientSED/releases/tag/v0.0.1). 
 All model checkpoints are automatically downloaded when they are needed by running the code, or can be manually downloaded from the GitHub release.
 
-## Checkpoints trained on AudioSet Weak
+## Checkpoints of models trained on AudioSet Weak
 
 | Model | Checkpoint Name            |
 |-------|----------------------------|
@@ -125,7 +125,7 @@ All model checkpoints are automatically downloaded when they are needed by runni
 | fmn20 | fmn20_weak.pt              |
 | fmn30 | fmn30_weak.pt              |
 
-## Checkpoints trained on AudioSet Strong without a sequence model
+## Checkpoints of models trained on AudioSet Strong
 
 | Model | LR   | PSDS1 | Checkpoint Name |
 |-------|------|-------|-----------------|
@@ -135,7 +135,7 @@ All model checkpoints are automatically downloaded when they are needed by runni
 | fmn20 | 3e-3 | 43.86 | fmn20_strong.pt |
 | fmn30 | 3e-3 | 44.24 | fmn30_strong.pt |
 
-## Checkpoints of _fmn10_ + sequence model trained on AudioSet Strong
+## Checkpoints of _fmn10 + seq model_ trained on AudioSet Strong
 
 | Model | LR   | Seq Model | Seq Model Dim | SEQ LR | PSDS1 | Checkpoint Name             |
 |-------|------|-----------|---------------|--------|-------|-----------------------------|
@@ -153,7 +153,7 @@ All model checkpoints are automatically downloaded when they are needed by runni
 | fmn10 | 3e-3 | GRU       | 1024          | 8e-4   | 44.50 | fmn10+gru-1024_strong.pt    |
 
 
-## Checkpoints of other _fmns_ + sequence model trained on AudioSet Strong
+## Checkpoints of other _fmns + seq model_ trained on AudioSet Strong
 
 | Model | LR   | Seq Model | Seq Model Dim | SEQ LR | PSDS1 | Checkpoint Name            |
 |-------|------|-----------|---------------|--------|-------|----------------------------|
@@ -170,12 +170,19 @@ All model checkpoints are automatically downloaded when they are needed by runni
 | fmn30 | 3e-3 | HYBRID    | 768           | 3e-3   | 45.67 | fmn30+hybrid-768_strong.pt |
 | fmn30 | 3e-3 | GRU       | 768           | 8e-4   | 45.77 | fmn30+gru-768_strong.pt    |
 
+## Checkpoints trained using the Advanced Knowledge Distillation setup
+
+| Model | LR   | Seq Model | Seq Model Dim | SEQ LR | PSDS1 | Checkpoint Name                         |
+|-------|------|-----------|---------------|--------|-------|-----------------------------------------|
+| fmn10 | 3e-3 | TF        | 256           | 3e-3   | 45.25 | fmn10+tf-256_advanced-kd-weak-strong.pt |
+
 
 # AudioSet Strong training
 
 ## Prepare dataset
 
 Follow the instructions in [PretrainedSED](https://github.com/fschmid56/PretrainedSED?tab=readme-ov-file#prepare-dataset) to download and prepare the dataset.
+Make sure to set the environment variable ```HF_DATASETS_CACHE```. 
 
 ## Download ensemble pseudo labels
 

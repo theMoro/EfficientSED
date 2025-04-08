@@ -5,8 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions.beta import Beta
 
-def frame_shift(mels, labels, embeddings=None, pseudo_labels=None,
-                net_pooling=4, shift_range=0.125):
+def frame_shift(mels, labels, embeddings=None, pseudo_labels=None, net_pooling=4, shift_range=0.125):
     bsz, channels, n_bands, frames = mels.shape
     abs_shift_mel = int(frames * shift_range)
 
@@ -38,8 +37,7 @@ def frame_shift(mels, labels, embeddings=None, pseudo_labels=None,
     return tuple(out_args)
 
 
-def time_mask(features, labels, embeddings=None, pseudo_labels=None, net_pooling=4,
-              min_mask_ratio=0.05, max_mask_ratio=0.2):
+def time_mask(features, labels, embeddings=None, pseudo_labels=None, net_pooling=None, min_mask_ratio=0.05, max_mask_ratio=0.2):
     _, _, n_frame = labels.shape
 
     if embeddings is not None:
@@ -69,11 +67,24 @@ def time_mask(features, labels, embeddings=None, pseudo_labels=None, net_pooling
     return tuple(out_args)
 
 
-def mixup(data, embeddings=None, targets=None, pseudo_strong=None, alpha=0.2, beta=0.2, return_mix_coef=False):
+def mixup(data, embeddings=None, targets=None, valid_class_mask=None, pseudo_strong=None, pseudo_weak=None,
+          alpha=0.2, beta=0.2, mixup_label_type="soft", return_mix_coef=False, max_coef=False):
+    """Mixup data augmentation by permuting the data
+
+    Args:
+        data: input tensor, must be a batch so data can be permuted and mixed.
+        target: tensor of the target to be mixed, if None, do not return targets.
+        alpha: float, the parameter to the np.random.beta distribution
+        beta: float, the parameter to the np.random.beta distribution
+        mixup_label_type: str, the type of mixup to be used choice between {'soft', 'hard'}.
+    Returns:
+        torch.Tensor of mixed data and labels if given
+    """
     with torch.no_grad():
         batch_size = data.size(0)
         c = np.random.beta(alpha, beta, size=batch_size)
-        c = np.maximum(c, 1 - c)
+        if max_coef:
+            c = np.maximum(c, 1 - c)
 
         perm = torch.randperm(batch_size)
         cd = torch.tensor(c, dtype=data.dtype, device=data.device).view(batch_size, *([1] * (data.ndim - 1)))
@@ -85,22 +96,43 @@ def mixup(data, embeddings=None, targets=None, pseudo_strong=None, alpha=0.2, be
 
         if targets is not None:
             ct = torch.tensor(c, dtype=data.dtype, device=data.device).view(batch_size, *([1] * (targets.ndim - 1)))
-            mixed_target = torch.clamp(
-                ct * targets + (1 - ct) * targets[perm, :], min=0, max=1
-            )
+            if mixup_label_type == "soft":
+                mixed_target = torch.clamp(
+                    ct * targets + (1 - ct) * targets[perm, :], min=0, max=1
+                )
+            elif mixup_label_type == "hard":
+                mixed_target = torch.clamp(targets + targets[perm, :], min=0, max=1)
+            else:
+                raise NotImplementedError(
+                    f"mixup_label_type: {mixup_label_type} not implemented. choice in "
+                    f"{'soft', 'hard'}"
+                )
 
         if pseudo_strong is not None:
             cp = torch.tensor(c, dtype=pseudo_strong.dtype, device=pseudo_strong.device).view(batch_size,
                                                                                               *([1] * (pseudo_strong.ndim - 1)))
             mixed_pseudo_strong = cp * pseudo_strong + (1 - cp) * pseudo_strong[perm, :]
 
+        if pseudo_weak is not None:
+            cp = torch.tensor(c, dtype=pseudo_weak.dtype, device=pseudo_weak.device).view(batch_size,
+                                                                                              *([1] * (pseudo_weak.ndim - 1)))
+            mixed_pseudo_weak = cp * pseudo_weak + (1 - cp) * pseudo_weak[perm, :]
+
+        if valid_class_mask is not None:
+            targets_mask = targets[perm, :].sum(dim=2) != 0
+            mixed_valid_class_mask = valid_class_mask | targets_mask
+
     out_args = [mixed_data]
     if embeddings is not None:
         out_args.append(mixed_embeddings)
     if targets is not None:
         out_args.append(mixed_target)
+    if valid_class_mask is not None:
+        out_args.append(mixed_valid_class_mask)
     if pseudo_strong is not None:
         out_args.append(mixed_pseudo_strong)
+    if pseudo_weak is not None:
+        out_args.append(mixed_pseudo_weak)
 
     if return_mix_coef:
         out_args.append(perm)
@@ -133,24 +165,29 @@ def filt_aug_(features, db_range=(-6, 6), n_band=(3, 6), min_bw=6):
 
 
 def filter_augmentation(features, n_transform=1, filter_db_range=(-6, 6),
-                        filter_bands=(3, 6), filter_minimum_bandwidth=6):
+                        filter_bands=(3, 6), filter_minimum_bandwidth=6, seed=None):
+    if seed is not None:
+        # Set the seed for reproducibility
+        torch.manual_seed(seed)
+
     if n_transform == 2:
         feature_list = []
         for _ in range(n_transform):
             features_temp = features
             features_temp = filt_aug_(features_temp, db_range=filter_db_range, n_band=filter_bands,
-                                      min_bw=filter_minimum_bandwidth)
+                                         min_bw=filter_minimum_bandwidth)
             feature_list.append(features_temp)
         return feature_list
     elif n_transform == 1:
         features = filt_aug_(features, db_range=filter_db_range, n_band=filter_bands,
-                             min_bw=filter_minimum_bandwidth)
+                            min_bw=filter_minimum_bandwidth)
         return [features, features]
     else:
         return [features, features]
 
 
-def mixstyle(x, alpha=0.4, eps=1e-6):
+
+def mixstyle(x, embeddings=None, alpha=0.4, eps=1e-6):
     batch_size = x.size(0)
 
     # frequency-wise statistics
@@ -167,8 +204,24 @@ def mixstyle(x, alpha=0.4, eps=1e-6):
     mu_mix = f_mu * lmda + f_mu_perm * (1 - lmda)  # generate mixed mean
     sig_mix = f_sig * lmda + f_sig_perm * (1 - lmda)  # generate mixed standard deviation
     x = x_normed * sig_mix + mu_mix  # denormalize input using the mixed statistics
-    return x
 
+    if embeddings is not None:
+        assert len(embeddings.size()) == 4
+        f_mu = embeddings.mean(dim=3, keepdim=True)
+        f_var = embeddings.var(dim=3, keepdim=True)
+        f_sig = (f_var + eps).sqrt()  # compute instance standard deviation
+        f_mu, f_sig = f_mu.detach(), f_sig.detach()  # block gradients
+        embeddings_normed = (embeddings - f_mu) / f_sig
+
+        # reuse coefficients and permutation
+        f_mu_perm, f_sig_perm = f_mu[perm], f_sig[perm]  # shuffling
+        mu_mix = f_mu * lmda + f_mu_perm * (1 - lmda)  # generate mixed mean
+        sig_mix = f_sig * lmda + f_sig_perm * (1 - lmda)  # generate mixed standard deviation
+        embeddings = embeddings_normed * sig_mix + mu_mix  # denormalize input using the mixed statistics
+
+        return x, embeddings
+
+    return x
 
 class RandomResizeCrop(nn.Module):
     """Random Resize Crop block.
@@ -191,13 +244,16 @@ class RandomResizeCrop(nn.Module):
     def get_params(virtual_crop_size, in_size, time_scale, freq_scale):
         canvas_h, canvas_w = virtual_crop_size
         src_h, src_w = in_size
-        h = np.clip(int(np.random.uniform(*freq_scale) * src_h), 1, canvas_h)
-        w = np.clip(int(np.random.uniform(*time_scale) * src_w), 1, canvas_w)
-        i = random.randint(0, canvas_h - h) if canvas_h > h else 0
-        j = random.randint(0, canvas_w - w) if canvas_w > w else 0
+        h = np.clip(int(torch.empty(1).uniform_(*freq_scale).item() * src_h), 1, canvas_h)
+        w = np.clip(int(torch.empty(1).uniform_(*time_scale).item() * src_w), 1, canvas_w)
+        i = torch.randint(0, canvas_h - h, (1,)).item() if canvas_h > h else 0
+        j = torch.randint(0, canvas_w - w, (1,)).item() if canvas_w > w else 0
         return i, j, h, w
 
-    def forward(self, lms):
+    def forward(self, lms, seed=None):
+        if seed != None:
+            torch.manual_seed(seed)
+
         # spec_output = []
         # for lms in specs:
         # lms = lms.unsqueeze(0)

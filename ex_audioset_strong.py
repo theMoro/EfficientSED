@@ -169,10 +169,10 @@ class PLModule(pl.LightningModule):
                             seq_model_params_leq1D.append(param)
 
             param_groups = [
-                {'params': pt_model_params_leq1D, 'lr': lr},  # backbone model
-                {'params': pt_model_params_geq2D, 'lr': lr, 'weight_decay': weight_decay},  # backbone model
-                {'params': ds_model_params_leq1D, 'lr': seq_lr},  # sequence model
-                {'params': ds_model_params_geq2D, 'lr': seq_lr, 'weight_decay': weight_decay}  # sequence model
+                {'params': backbone_model_params_leq1D, 'lr': lr},  # backbone model
+                {'params': backbone_model_params_geq2D, 'lr': lr, 'weight_decay': weight_decay},  # backbone model
+                {'params': seq_model_params_leq1D, 'lr': seq_lr},  # sequence model
+                {'params': seq_model_params_geq2D, 'lr': seq_lr, 'weight_decay': weight_decay}  # sequence model
             ]
 
         if weight_decay > 0:
