@@ -84,6 +84,7 @@ def target_transform(sample):
 
 
 def filename_transform(sample):
+    print(sample.keys())
     sample["filename"] = [name.replace(".mp3", "").split("Y", 1)[1] for name in sample["filename"]]
     return sample
 
@@ -159,7 +160,7 @@ def get_training_dataset(
 
     def no_decode(b):
         b['audio'] = [torch.zeros(10)]
-        b["sampling_rate"] = [32000]
+        b["sampling_rate"] = [16_000]
         return b
 
     mp3_decode_transform = Mp3DecodeTransform(
@@ -182,7 +183,8 @@ def get_training_dataset(
     ds_list.append(as_ds["balanced_train"])
     ds_list.append(as_ds["unbalanced_train"])
     dataset = torch.utils.data.ConcatDataset(ds_list)
-    dataset = AddPseudoLabelsDataset(dataset)
+
+    # dataset = AddPseudoLabelsDataset(dataset)
     if wavmix:
         dataset = MixupDataset(dataset)
     if augment:
@@ -292,7 +294,7 @@ def get_weighted_sampler(
 
 
 def get_ft_cls_balanced_sample_weights(dataset, sample_weight_offset=100, sample_weight_sum=True,
-                                       save_folder="/share/rk8/shared/as_strong/"):
+                                       save_folder="resources"):
     """
     :return: float tenosr of shape len(full_training_set) representing the weights of each sample.
     """
@@ -307,6 +309,7 @@ def get_ft_cls_balanced_sample_weights(dataset, sample_weight_offset=100, sample
     for sample in dataset:
         target = sample['target']
         all_y.append(target)
+
     all_y = torch.stack(all_y)
     per_class = all_y.long().sum(0).float().reshape(1, -1)  # frequencies per class
 
@@ -438,6 +441,6 @@ class ValidationDistributedSampler(DistributedSampler):
             inds[i].extend(indices[i : len(indices) : self.num_replicas])
         if self.epoch < 2:
             logger.info(
-                f"\n ValidatoinDistributedSampler epoch {self.epoch} (rank {self.rank}, nodes {self.num_replicas}) :  {inds[self.rank][:3]} \n\n"
+                f"\n ValidationDistributedSampler epoch {self.epoch} (rank {self.rank}, nodes {self.num_replicas}) :  {inds[self.rank][:3]} \n\n"
             )
         return iter(inds[self.rank])

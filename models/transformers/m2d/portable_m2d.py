@@ -13,7 +13,7 @@ import numpy as np
 import timm
 import torch
 from einops import rearrange
-from timm.models.layers import trunc_normal_
+from timm.layers import trunc_normal_
 
 
 class Config:

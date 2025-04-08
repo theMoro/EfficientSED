@@ -192,7 +192,7 @@ def get_uniform_sample_weights(dataset):
 
 
 def get_temporal_count_balanced_sample_weights(dataset, sample_weight_offset=30,
-                                               save_folder="/share/rk8/shared/as_strong"):
+                                               save_folder="resources"):
     """
     :return: float tensor of shape len(full_training_set) representing the weights of each sample.
     """

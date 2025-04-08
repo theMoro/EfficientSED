@@ -23,6 +23,8 @@ from models.transformers.beats.BEATs_wrapper import BEATsWrapper
 from models.transformers.frame_passt.fpasst_wrapper import FPaSSTWrapper
 from models.transformers.m2d.M2D_wrapper import M2DWrapper
 from models.prediction_wrapper import PredictionsWrapper
+from models.efficient_cnns.fmn.fmn_wrapper import FrameMNWrapper
+from models.efficient_cnns.fmn.utils import NAME_TO_WIDTH
 
 
 class PLModule(pl.LightningModule):
@@ -30,44 +32,81 @@ class PLModule(pl.LightningModule):
         super().__init__()
         self.config = config
 
-        if config.pretrained == "scratch":
-            checkpoint = None
-        elif config.pretrained == "ssl":
-            checkpoint = "ssl"
-        elif config.pretrained == "weak":
-            checkpoint = "weak"
-        elif config.pretrained == "strong":
-            checkpoint = "strong_1"
+        if config.model_name in ["BEATs", "ATST-F", "fpasst", "M2D", "ASIT"]:
+            if config.pretrained == "scratch":
+                checkpoint = None
+            elif config.pretrained == "ssl":
+                checkpoint = "ssl"
+            elif config.pretrained == "weak":
+                checkpoint = "weak"
+            elif config.pretrained == "strong":
+                checkpoint = "strong_1"
+            else:
+                raise ValueError(f"Unknown pretrained checkpoint: {config.pretrained}")
+        elif config.model_name.startswith("fmn"):
+            if config.pretrained in ["weak", "strong", "advanced-kd-weak-strong"]:
+                checkpoint = config.pretrained
+            elif config.pretrained == "scratch":
+                checkpoint = None
+            else: raise ValueError(f"Invalid configuration for fmn model: config.pretrained={config.pretrained}")
         else:
-            raise ValueError(f"Unknown pretrained checkpoint: {config.pretrained}")
+            raise ValueError(f"Invalid model_name!")
 
-        # load transformer model
+        # load pretrained model
         if config.model_name == "BEATs":
             beats = BEATsWrapper()
             model = PredictionsWrapper(beats, checkpoint=f"BEATs_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
+                                       seq_model_dim=config.seq_model_dim,
                                        n_classes_strong=self.config.n_classes)
         elif config.model_name == "ATST-F":
             atst = ATSTWrapper()
             model = PredictionsWrapper(atst, checkpoint=f"ATST-F_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
+                                       seq_model_dim=config.seq_model_dim,
                                        n_classes_strong=self.config.n_classes)
         elif config.model_name == "fpasst":
             fpasst = FPaSSTWrapper()
             model = PredictionsWrapper(fpasst, checkpoint=f"fpasst_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
+                                       seq_model_dim=config.seq_model_dim,
                                        n_classes_strong=self.config.n_classes)
         elif config.model_name == "M2D":
             m2d = M2DWrapper()
             model = PredictionsWrapper(m2d, checkpoint=f"M2D_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
+                                       seq_model_dim=config.seq_model_dim,
                                        n_classes_strong=self.config.n_classes,
                                        embed_dim=m2d.m2d.cfg.feature_d)
         elif config.model_name == "ASIT":
             asit = ASiTWrapper()
             model = PredictionsWrapper(asit, checkpoint=f"ASIT_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
+                                       seq_model_dim=config.seq_model_dim,
                                        n_classes_strong=self.config.n_classes)
+        elif config.model_name.startswith("fmn"):
+            width = NAME_TO_WIDTH(config.model_name)
+            fmn = FrameMNWrapper(width)
+            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]  # TODO: check if it works
+
+            # build checkpoint name
+            checkpoint_name = None
+
+            if checkpoint:
+                seq_model_name = ""
+                if config.seq_model_type and checkpoint in ["strong",
+                                                            "advanced-kd-weak-strong"]:  # sequence models are only used for training on AS Strong
+                    seq_model_name = f"+{config.seq_model_type}-{config.seq_model_dim}"
+
+                checkpoint_name = f"{config.model_name}{seq_model_name}_{checkpoint}"
+
+            model = PredictionsWrapper(
+                fmn,
+                checkpoint=checkpoint_name,
+                seq_model_type=config.seq_model_type,
+                seq_model_dim=config.seq_model_dim,
+                embed_dim=embed_dim
+            )
         else:
             raise NotImplementedError(f"Model {config.model_name} not (yet) implemented")
 
@@ -130,7 +169,7 @@ class PLModule(pl.LightningModule):
         for name, p in self.named_parameters():
             name = name[len("model."):]
             if name.startswith('model'):
-                # the transformer
+                # the backbone model
                 pt_params.append(p)
             elif name.startswith('seq_model'):
                 # the optional sequence model
@@ -156,8 +195,8 @@ class PLModule(pl.LightningModule):
             self,
             lr,
             lr_decay=1.0,
-            transformer_lr=None,
-            transformer_frozen=False,
+            backbone_lr=None,
+            backbone_frozen=False,
             adamw=False,
             weight_decay=0.01,
             betas=(0.9, 0.999)
@@ -168,7 +207,7 @@ class PLModule(pl.LightningModule):
             {'params': head_params, 'lr': lr},  # model head (besides base model and seq model)
         ]
 
-        if transformer_frozen:
+        if backbone_frozen:
             for p in pt_params + seq_params:
                 if isinstance(p, list):
                     for p_i in p:
@@ -176,16 +215,16 @@ class PLModule(pl.LightningModule):
                 else:
                     p.detach_()
         else:
-            if transformer_lr is None:
-                transformer_lr = lr
+            if backbone_lr is None:
+                backbone_lr = lr
             if isinstance(pt_params, list) and isinstance(pt_params[0], list):
                 # apply lr decay
-                scale_lrs = [transformer_lr * (lr_decay ** i) for i in range(1, len(pt_params) + 1)]
+                scale_lrs = [backbone_lr * (lr_decay ** i) for i in range(1, len(pt_params) + 1)]
                 param_groups = param_groups + [{"params": pt_params[i], "lr": scale_lrs[i]} for i in
                                                range(len(pt_params))]
             else:
                 param_groups.append(
-                    {'params': pt_params, 'lr': transformer_lr},  # pretrained model
+                    {'params': pt_params, 'lr': backbone_lr},  # pretrained model
                 )
             param_groups.append(
                 {'params': seq_params, 'lr': lr},  # pretrained model
@@ -246,8 +285,8 @@ class PLModule(pl.LightningModule):
         """
         optimizer = self.get_optimizer(self.config.max_lr,
                                        lr_decay=self.config.lr_decay,
-                                       transformer_lr=self.config.transformer_lr,
-                                       transformer_frozen=self.config.transformer_frozen,
+                                       backbone_lr=self.config.backbone_lr,
+                                       backbone_frozen=self.config.backbone_frozen,
                                        adamw=False if self.config.no_adamw else True,
                                        weight_decay=self.config.weight_decay)
 
@@ -273,7 +312,7 @@ class PLModule(pl.LightningModule):
 
         audios, labels, fnames, timestamps = train_batch
 
-        if self.config.transformer_frozen:
+        if self.config.backbone_frozen:
             self.model.model.eval()
             self.model.seq_model.eval()
         mel = self.model.mel_forward(audios)
@@ -396,7 +435,7 @@ class PLModule(pl.LightningModule):
 
 
 def train(config):
-    # Example for fine-tuning pre-trained transformers on a downstream task.
+    # Example for fine-tuning pre-trained models on a downstream task.
 
     # logging is done using wandb
     wandb_logger = WandbLogger(
@@ -474,16 +513,19 @@ if __name__ == '__main__':
 
     # model
     parser.add_argument('--model_name', type=str,
-                        choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"],
-                        default="ATST-F")  # used also for training
+                        choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"] + \
+                                [f"fmn{width}" for width in ["04", "06", "10", "20", "30"]],
+                        default="fmn10")  # used also for training
     # "scratch" = no pretraining
     # "ssl" = SSL pre-trained
     # "weak" = AudioSet Weak pre-trained
     # "strong" = AudioSet Strong pre-trained
-    parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong"],
+    parser.add_argument('--pretrained', type=str, choices=["scratch", "ssl", "weak", "strong", "advanced-kd-weak-strong"],
                         default="strong")
-    parser.add_argument('--seq_model_type', type=str, choices=["gru"],
+    parser.add_argument('--seq_model_type', type=str, choices=[None, "gru", "attn", "tf", "mamba", "tcn", "hybrid"],
                         default=None)
+    parser.add_argument('--seq_model_dim', type=int, default=256)
+
     parser.add_argument('--n_classes', type=int, default=11)
 
     # training
@@ -501,14 +543,14 @@ if __name__ == '__main__':
     # optimizer
     parser.add_argument('--no_adamw', action='store_true', default=False)
     parser.add_argument('--weight_decay', type=float, default=0.001)
-    parser.add_argument('--transformer_frozen', action='store_true', dest='transformer_frozen',
+    parser.add_argument('--backbone_frozen', action='store_true', dest='backbone_frozen',
                         default=False,
-                        help='Disable training for the transformer.')
+                        help='Disable training for the backbone model.')
 
     # lr schedule
     parser.add_argument('--schedule_mode', type=str, default="cos")
     parser.add_argument('--max_lr', type=float, default=1.06e-4)
-    parser.add_argument('--transformer_lr', type=float, default=None)
+    parser.add_argument('--backbone_lr', type=float, default=None)
     parser.add_argument('--lr_decay', type=float, default=1.0)
     parser.add_argument('--lr_end', type=float, default=1e-7)
     parser.add_argument('--warmup_steps', type=int, default=100)

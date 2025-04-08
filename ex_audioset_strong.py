@@ -64,25 +64,25 @@ class PLModule(pl.LightningModule):
         if config.model_name == "BEATs":
             beats = BEATsWrapper()
             model = PredictionsWrapper(beats, checkpoint=f"BEATs_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=config.seq_model_dim)
         elif config.model_name == "ATST-F":
             atst = ATSTWrapper()
             model = PredictionsWrapper(atst, checkpoint=f"ATST-F_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=config.seq_model_dim)
         elif config.model_name == "fpasst":
             fpasst = FPaSSTWrapper()
             model = PredictionsWrapper(fpasst, checkpoint=f"fpasst_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=config.seq_model_dim)
         elif config.model_name == "M2D":
             m2d = M2DWrapper()
             model = PredictionsWrapper(m2d, checkpoint=f"M2D_{checkpoint}" if checkpoint else None,
                                        seq_model_type=config.seq_model_type,
                                        embed_dim=m2d.m2d.cfg.feature_d,
-                                       seq_model_dim=2048)
+                                       seq_model_dim=config.seq_model_dim)
         elif config.model_name == "ASIT":
             asit = ASiTWrapper()
             model = PredictionsWrapper(asit, checkpoint=f"ASIT_{checkpoint}" if checkpoint else None,
-                                       seq_model_type=config.seq_model_type, seq_model_dim=2048)
+                                       seq_model_type=config.seq_model_type, seq_model_dim=config.seq_model_dim)
         # or load CNN model
         # If config.pretrained == "strong", we load models (with or without sequence model on top) pretrained on AudioSet Strong --> sequence model is pretrained
         # If config.pretrained == "weak", we load models WITHOUT a sequence model pretrained on AudioSet Weak --> sequence model is trained from scratch

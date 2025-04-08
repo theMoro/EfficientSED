@@ -713,7 +713,8 @@ def train(config):
     if config.as_weak_sampling_strategy == 'uniform':
         as_weak_sample_weights = audioset.get_uniform_sample_weights(as_weak_train_set)
     elif config.as_weak_sampling_strategy == 'count':
-        as_weak_sample_weights = audioset.get_ft_cls_balanced_sample_weights(as_weak_train_set, save_folder='resources')
+        save_folder = '/opt/scratch/as_strong/'  # TODO: change it to resources, fix this problem!
+        as_weak_sample_weights = audioset.get_ft_cls_balanced_sample_weights(as_weak_train_set, save_folder=save_folder)
     else:
         raise ValueError(f"Unknown as_weak_sampling_strategy: {config.as_weak_sampling_strategy}")
 
@@ -737,8 +738,7 @@ def train(config):
 
 
     # AudioSet Strong
-    as_strong_train_set = get_training_dataset(encoder, wavmix_p=config.wavmix_p,
-                                     pseudo_labels_file=config.pseudo_labels_file)
+    as_strong_train_set = get_training_dataset(encoder, wavmix_p=config.wavmix_p)
     eval_set = get_eval_dataset(encoder)
 
     if config.use_balanced_sampler:
@@ -845,7 +845,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment_name', type=str, default="AudioSet_Strong")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--accumulate_grad_batches', type=int, default=4)
-    parser.add_argument('--num_workers', type=int, default=16)
+    parser.add_argument('--num_workers', type=int, default=0)  # TODO: change to 16
     parser.add_argument('--num_devices', type=int, default=1)
     parser.add_argument('--precision', type=int, default=16)
     parser.add_argument('--check_val_every_n_epoch', type=int, default=5)
