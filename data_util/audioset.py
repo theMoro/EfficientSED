@@ -44,35 +44,6 @@ def get_hf_local_path(path, local_datasets_path=None):
     path = os.path.join(local_datasets_path, path)
     return path
 
-
-def cv_transform(sample):
-    sample["sampling_rate"] = [sample["audio"][0]["sampling_rate"]]
-    sample["filename"] = [sample["audio"][0]["path"]]
-    sample["audio"] = [sample["audio"][0]["array"]]
-    sample["dataset"] = ["common_voice"]
-    sample["domain"] = ["speech"]
-
-    del sample["client_id"]
-    del sample["path"]
-    del sample["sentence"]
-    del sample["up_votes"]
-    del sample["down_votes"]
-    del sample["age"]
-    del sample["gender"]
-    del sample["accent"]
-    del sample["locale"]
-    del sample["segment"]
-    del sample["variant"]
-    return sample
-
-
-def audioset_transform(sample):
-    # del sample["target"]
-    sample["dataset"] = ["audioset"]
-    sample["domain"] = ["env_sounds"]
-    return sample
-
-
 def unsqueeze_mono_transform(sample):  # size: 8000 --> 1, 8000
     sample["audio"] = [a.unsqueeze(0) for a in sample["audio"]]
     return sample
@@ -84,7 +55,6 @@ def target_transform(sample):
 
 
 def filename_transform(sample):
-    print(sample.keys())
     sample["filename"] = [name.replace(".mp3", "").split("Y", 1)[1] for name in sample["filename"]]
     return sample
 
@@ -173,7 +143,6 @@ def get_training_dataset(
         as_ds = datasets.load_from_disk(get_hf_local_path("audioset2m"))
 
     as_transforms = [
-        audioset_transform,
         mp3_decode_transform,
         target_transform,
         filename_transform,  # for loading correct ensemble predictions
@@ -205,7 +174,6 @@ def get_validation_dataset(
     with catchtime(f"Loading audioset:"):
         as_ds = datasets.load_from_disk(get_hf_local_path("audioset2m"))
     as_transforms = [
-        audioset_transform,
         decode_transform,
         target_transform
     ]

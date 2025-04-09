@@ -175,16 +175,16 @@ class PLModule(pl.LightningModule):
         if self.training:
             # MixUp inputs & targets
             batch_size = len(y)
-            if self.weak_augmentations.use_mixup:
-                mixup_config = get_mixup_coefficients(batch_size, self.weak_augmentations.mixup_alpha)
+            if self.config.as_weak_mixup_p > random.random():
+                mixup_config = get_mixup_coefficients(batch_size, self.config.as_weak_mixup_alpha)
                 mixup_config = (mixup_config[0].to(x_mel.device), mixup_config[1].to(x_mel.device))
                 permutation_indices, lam = mixup_config
                 x_mel = apply_mixup(x_mel, permutation_indices, lam)
-                if self.online_teacher_net is not None:
+                if self.online_teacher is not None:
                     x_mel_online_teacher = apply_mixup(x_mel_online_teacher, permutation_indices, lam)
                 y = y * lam.reshape(batch_size, 1) + y[permutation_indices] * (1. - lam.reshape(batch_size, 1))
 
-            if self.weak_augmentations.freq_warp_p > random.random():
+            if self.config.as_weak_freq_warp_p > random.random():
                 # Save the current random state
                 rng_state = torch.random.get_rng_state()
 
@@ -195,7 +195,7 @@ class PLModule(pl.LightningModule):
                 x_mel = self.freq_warp(x_mel, seed=seed)
                 x_mel = x_mel.unsqueeze(1)
 
-                if self.online_teacher_net is not None:
+                if self.online_teacher is not None:
                     x_mel_online_teacher = x_mel_online_teacher.squeeze(1)
                     x_mel_online_teacher = self.freq_warp(x_mel_online_teacher, seed=seed)
                     x_mel_online_teacher = x_mel_online_teacher.unsqueeze(1)
@@ -204,7 +204,7 @@ class PLModule(pl.LightningModule):
                 torch.random.set_rng_state(rng_state)
 
         # forward through network; use weak head
-        y_hat_strong, y_hat = self.net(x_mel)
+        y_hat_strong, y_hat = self.model(x_mel)
 
         # store things in batch for loss computation
         batch['y'] = y
@@ -212,10 +212,10 @@ class PLModule(pl.LightningModule):
         batch['y_hat_strong'] = y_hat_strong
         batch['mixup_config'] = mixup_config
 
-        if self.online_teacher_net is not None:
-            self.online_teacher_net.eval()
+        if self.online_teacher is not None:
+            self.online_teacher.eval()
             with torch.no_grad():
-                y_hat_strong_online_teacher, _ = self.online_teacher_net(x_mel_online_teacher)
+                y_hat_strong_online_teacher, _ = self.online_teacher(x_mel_online_teacher)
             batch['y_hat_strong_online_teacher'] = y_hat_strong_online_teacher
 
         return batch
@@ -237,7 +237,7 @@ class PLModule(pl.LightningModule):
 
         if self.online_teacher is not None:
             if hasattr(self.online_teacher, "eval"):
-                self.online_teacher_mel.eval()
+                self.online_teacher.eval()
             x_mel_online_teacher = self.online_teacher.mel_forward(x)
         else:
             x_mel_online_teacher = torch.zeros_like(features)
@@ -252,7 +252,7 @@ class PLModule(pl.LightningModule):
                     embeddings=x_mel_online_teacher,
                     pseudo_labels=pseudo_labels,
                     net_pooling=self.encoder.net_pooling,
-                    shift_range=self.strong_augmentations.time_augment.shift_range
+                    shift_range=self.config.frame_shift_range
                 )
 
             # mixup
@@ -317,7 +317,7 @@ class PLModule(pl.LightningModule):
                 features = self.freq_warp(features, seed=seed)
                 features = features.unsqueeze(1)
 
-                if self.online_teacher_mel is not None:
+                if self.online_teacher is not None:
                     x_mel_online_teacher = x_mel_online_teacher.squeeze(1)
                     x_mel_online_teacher = self.freq_warp(x_mel_online_teacher, seed=seed)
                     x_mel_online_teacher = x_mel_online_teacher.unsqueeze(1)
@@ -328,7 +328,7 @@ class PLModule(pl.LightningModule):
             batch['pseudo_strong'] = pseudo_labels
 
         # forward through network; use strong head
-        y_hat_strong, y_hat = self.net(features)
+        y_hat_strong, y_hat = self.model(features)
 
         # store things in batch for loss computation
         batch['y_hat'] = y_hat
@@ -467,8 +467,6 @@ class PLModule(pl.LightningModule):
 
             # compute the weak supervised loss
             with autocast(enabled=True, device_type="cuda"):
-
-                weak_batch['pseudo_weak'] = weak_batch['pseudo_weak'].float()
                 weak_batch['y_hat_strong'] = weak_batch['y_hat_strong'].float()
 
                 y_hat = weak_batch['y_hat'].float()
@@ -514,13 +512,13 @@ class PLModule(pl.LightningModule):
                 # compute the weak supervised loss
                 y_hat_strong = strong_batch["y_hat_strong"].float()
                 y_strong = strong_batch["y_strong"].float()
-                pseudo_strong = strong_batch["pseudo_strong"].float()
 
                 strong_supervised_loss = self.strong_loss(y_hat_strong, y_strong)
                 # return 0 if weight is zero
                 if self.config.strong_distillation_loss_weight <= 0:
                     strong_distillation_loss = torch.tensor(0., device=y_hat_strong.device, dtype=y_hat_strong.dtype)
                 else:
+                    pseudo_strong = strong_batch["pseudo_strong"].float()
                     strong_distillation_loss = self.strong_loss(y_hat_strong, pseudo_strong)
 
                 if self.config.online_distillation_loss_weight > 0:
@@ -872,7 +870,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch_len', type=int, default=100_000)
     parser.add_argument('--median_window', type=int, default=9)
 
-    # augmentation
+    # augmentations for AudioSet Strong
     parser.add_argument('--wavmix_p', type=float, default=0.5)
     parser.add_argument('--freq_warp_p', type=float, default=0.0)
     parser.add_argument('--filter_augment_p', type=float, default=0.0)
@@ -880,6 +878,12 @@ if __name__ == '__main__':
     parser.add_argument('--mixup_p', type=float, default=0.3)
     parser.add_argument('--mixstyle_p', type=float, default=0.0)
     parser.add_argument('--max_time_mask_size', type=float, default=0.0)
+
+    # augmentations for AudioSet Weak
+    parser.add_argument('--as_weak_mixup_alpha', type=float, default=0.3)
+    parser.add_argument('--as_weak_mixup_p', type=float, default=0.3)
+    parser.add_argument('--as_weak_freq_warp_p', type=float, default=0.0)
+
 
     # optimizer
     parser.add_argument('--adamw', action='store_true', default=False)
