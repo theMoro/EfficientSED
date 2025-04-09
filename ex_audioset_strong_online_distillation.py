@@ -840,7 +840,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Configuration Parser. ')
 
     # general
-    parser.add_argument('--experiment_name', type=str, default="AudioSet_Strong")
+    parser.add_argument('--experiment_name', type=str, default="audioset_online_distillation")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--accumulate_grad_batches', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=16)

@@ -440,7 +440,7 @@ def train(config):
 
     # logging is done using wandb
     wandb_logger = WandbLogger(
-        project="PTSED",
+        project="EfficientSED_DCASE2016Task2",
         notes="Downstream Training on office sound event detection.",
         tags=["DCASE 2016 Task 2", "Sound Event Detection"],
         config=config,

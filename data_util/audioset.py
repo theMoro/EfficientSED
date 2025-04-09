@@ -286,7 +286,7 @@ def get_ft_cls_balanced_sample_weights(dataset, sample_weight_offset=100, sample
 
     per_class = sample_weight_offset + per_class  # offset low freq classes
     if sample_weight_offset > 0:
-        print(f"Warning: sample_weight_offset={sample_weight_offset} minnow={per_class.min()}")
+        print(f"Warning: sample_weight_offset={sample_weight_offset} min now={per_class.min()}")
     per_class_weights = 1000. / per_class
     all_weight = all_y * per_class_weights
     # print(all_weight.shape)

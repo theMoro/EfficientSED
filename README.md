@@ -10,12 +10,12 @@ To optimize the performance-complexity trade-off, we investigate various sequenc
 We show that across different complexities of the frame-wise MobileNets, the performance-complexity trade-off can be clearly improved when using the right sequence model.
 
 We explore the following sequence models for the training on AudioSet Strong, stacked on top of the frame-wise MobileNets:
-- Transformer blocks (TF)
-- Bidirectional Gated Recurrent Units (BiGRU)
-- Self-Attention layers (ATT)
-- Temporal Convolutional Network blocks (TCN)
-- Mamba2 blocks (MAMBA)
-- Hybrid model combining minGRUs and self-attention (HYBRID)
+- Transformer blocks (TF) [2]
+- Bidirectional Gated Recurrent Units (BiGRU) [3]
+- Self-Attention layers (ATT) [2]
+- Temporal Convolutional Network blocks (TCN)  [4]
+- Mamba2 blocks (MAMBA) [5, 6]
+- Hybrid model (HYBRID) [7] combining minGRUs [8] and self-attention
 
 And we evaluate the **complexity** using the following three key metrics: 
 - total parameter count
@@ -182,6 +182,7 @@ All model checkpoints are automatically downloaded when they are needed by runni
 ## Prepare dataset
 
 Follow the instructions in [PretrainedSED](https://github.com/fschmid56/PretrainedSED?tab=readme-ov-file#prepare-dataset) to download and prepare the dataset.
+
 Make sure to set the environment variable ```HF_DATASETS_CACHE```. 
 
 ## Download ensemble pseudo labels
@@ -203,19 +204,19 @@ Example:
 Train _fmn10_ with transformer blocks of the dimension 256 (_fmn10+tf:256_) following the exact same setup as described in the paper including Knowledge Distillation:  
 
 ```
-python ex_audioset_strong.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=weak --max_lr=3e-3 --seq_lr=3e-3 --distillation_loss_weight=0.9 --pseudo_labels_file=<path_to_pseudo_label_file_from_Zenodo>
+python ex_audioset_strong.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=weak --max_lr=3e-3 --seq_lr=3e-3 --distillation_loss_weight=0.9 --pseudo_labels_file=<path_to_pseudo_label_file_from_Zenodo> --experiment_name=fmn10+tf:256_training
 ```
 
 Example:
 Train _fmn20+gru:512_ following the exact same setup as described in the paper including Knowledge Distillation:  
 
 ```
-python ex_audioset_strong.py --model_name=fmn20 --seq_model_type=gru --seq_model_dim=512 --pretrained=weak --max_lr=3e-3 --seq_lr=8e-4 --batch_size=32 --accumulate_grad_batches=8 --distillation_loss_weight=0.9 --pseudo_labels_file=<path_to_pseudo_label_file_from_Zenodo>
+python ex_audioset_strong.py --model_name=fmn20 --seq_model_type=gru --seq_model_dim=512 --pretrained=weak --max_lr=3e-3 --seq_lr=8e-4 --batch_size=32 --accumulate_grad_batches=8 --distillation_loss_weight=0.9 --pseudo_labels_file=<path_to_pseudo_label_file_from_Zenodo> --experiment_name=fmn20+gru:512_training
 ```
 
 Example: Train _fmn06+hybrid:160_ without Knowledge Distillation: 
 ```
-python ex_audioset_strong.py --model_name=fmn06 --seq_model_type=hybrid --seq_model_dim=160 --pretrained=weak --batch_size=128 --accumulate_grad_batches=2 --max_lr=1e-4 --seq_lr=1e-4
+python ex_audioset_strong.py --model_name=fmn06 --seq_model_type=hybrid --seq_model_dim=160 --pretrained=weak --batch_size=128 --accumulate_grad_batches=2 --max_lr=1e-4 --seq_lr=1e-4 --experiment_name=fmn06+hybrid:160_training_without_kd
 ```
 
 The performance is significantly lower when training without Knowledge Distillation. 
@@ -227,7 +228,7 @@ Additionally, the learning rate needs to be adjusted when training without it.
 Evaluate the AudioSet Strong pre-trained checkpoint of _fmn10+tf:256_:
 
 ```
-python ex_audioset_strong.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=strong --evaluate
+python ex_audioset_strong.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=strong --evaluate --experiment_name=fmn10+tf:256_evaluate_strong_model
 ```
 
 If everything is set up correctly, this should give a `val/psds1_macro_averaged` of around 43.7.
@@ -236,7 +237,7 @@ If everything is set up correctly, this should give a `val/psds1_macro_averaged`
 
 The Advanced Knowledge Distillation setup refers to Section IV.D in the paper which is called _Expanding Knowledge Distillation to AudioSet Weak_.
 
-In this setup, we leverage the top-performing transformer model on AudioSet Strong from [PretrainedSED](https://github.com/fschmid56/PretrainedSED?tab=readme-ov-file#prepare-dataset), BEATs [cite], 
+In this setup, we leverage the top-performing transformer model on AudioSet Strong from [PretrainedSED](https://github.com/fschmid56/PretrainedSED?tab=readme-ov-file#prepare-dataset), BEATs [9], 
 to generate frame-level predictions for the AudioSet Strong as well as for the AudioSet Weak training split.
 The distillation loss is then computed on batches containing 50% AudioSet Weak and 50% AudioSet Strong samples.
 
@@ -246,35 +247,63 @@ Advanced Knowledge Distillation setup.
 The training can be run using the following command:
 
 ```
-python ex_audioset_strong_online_distillation.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=weak
+python ex_audioset_strong_online_distillation.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=weak --experiment_name=fmn10+tf:256_online_distillation
 ```
 
 **Note:** In this setup, the arguments ```weak_distillation_loss_weight``` and ```strong_distillation_loss_weight``` are both set to 0 by default, while 
 the arguments ```strong_supervised_loss_weight``` and ```online_distillation_loss_weight``` are set to 0.1 and 0.9 by default, respectively.
 
 
-# ! Repository in progress !
+# Fine-Tuning on Downstream Task
 
-This repository is in progress and will be updated with the pre-trained models and the code for training the efficient models in the next few weeks.
+We demonstrate how our pre-trained models can be fine-tuned for the downstream Sound Event Detection task by using our models on [DCASE 2016 Task 2](https://dcase.community/challenge2016/task-sound-event-detection-in-synthetic-audio-results).
+This task focuses on detecting office sounds and is part of the [HEAR benchmark](https://hearbenchmark.com/hear-tasks.html).
 
-**Update:** Repository is constantly being updated - this is not the final version.
+## Obtain DCASE 2016 Task 2 Dataset in HEAR format
 
-**TODO:**
-- [x] Add code for all the sequence models.
-- [x] Add code for training the efficient CNNs on AudioSet Strong.
-- [x] Merge the two Wrapper classes for the Audio Transformers and the Efficient CNNs.
-- [x] Add pre-trained models.
-- [x] Check inference.py for the efficient models.
-- [x] Add plots from the paper to the README file.
-- [x] Update requirements.txt
-- [x] Add file to train the efficient models using the "Online Distillation" setup. 
-- [x] Adapt ex_dcase2016task2.py to work with the efficient models.
-- [ ] Complete README file with run instructions for DCASE 2016 Task 2. 
+Follow the instructions on the [HEAR website](https://hearbenchmark.com/hear-tasks.html) to download the dataset in 16 kHz sampling rate. After completing the setup, your file tree should look similar to this:
+```
+hear_datasets/tasks/dcase2016_task2-hear2021-full/
+├── 16000
+├── 48000
+├── labelvocabulary.csv
+├── task_metadata.json
+├── test.json
+├── train.json
+└── valid.json
+```
 
+The ```16000``` folder contains audio files sampled at 16 kHz.
 
+## Run Fine-Tuning
+
+The script `ex_dcase2016task2.py` can be used to fine-tune a pre-trained model on the DCASE 2016 Task 2 dataset.
+
+To fine-tune the full ATST-F model, pre-trained on AudioSet Strong, with a layer-wise learning rate decay of 0.95, use the following command:
+
+```
+python ex_dcase2016task2.py --task_path=hear_datasets/tasks/dcase2016_task2-hear2021-full --model_name=ATST-F --pretrained=strong --lr_decay=0.95
+```
+
+To train only the linear prediction head on top of the frozen BEATs transformer, also pre-trained on AudioSet Strong, use this command:
+
+```
+python ex_dcase2016task2.py --task_path=hear_datasets/tasks/dcase2016_task2-hear2021-full --model_name=BEATs --pretrained=strong --backbone_frozen --max_lr=2e-1 --mixup_p=0 --wavmix_p=0 --no_adamw --weight_decay=0 --n_epochs=500
+```
+
+This script can also be used to fine-tune frame-wise MobileNets on this task. 
+However, we did not fine-tune the hyperparameters for training the frame-wise MobileNets on this task, so the results may not be optimal.
 
 
 
 # References
 
 [1] A. Howard, R. Pang, H. Adam, Q. V. Le, M. Sandler, B. Chen, W. Wang, L. Chen, M. Tan, G. Chu, V. Vasudevan, and Y. Zhu, “Searching for mobilenetv3,” in Proceedings of the International Conference on Computer Vision (ICCV), 2019.
+[2] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” in Proceedings of the Conference on Neural Information Processing Systems (NeurIPS), 2017.
+[3] K. Cho, B. van Merrienboer, C¸ . G ¨ulc¸ ehre, D. Bahdanau, F. Bougares, H. Schwenk, and Y. Bengio, “Learning phrase representations using RNN encoder-decoder for statistical machine translation,” in Proceedings of the Conference on Empirical Methods in Natural Language Processing, 2014, pp. 1724–1734.
+[4] A. van den Oord, S. Dieleman, H. Zen, K. Simonyan, O. Vinyals, A. Graves, N. Kalchbrenner, A. W. Senior, and K. Kavukcuoglu, “Wavenet: A generative model for raw audio,” in Speech Synthesis Workshop, 2016.
+[5] A. Gu and T. Dao, “Mamba: Linear-time sequence modeling with selective state spaces,” CoRR, vol. abs/2312.00752, 2023.
+[6] T. Dao and A. Gu, “Transformers are ssms: Generalized models and efficient algorithms through structured state space duality,” in Proceedings of the International Conference on Machine Learning (ICML), 2024.
+[7] P. Wang, “minGRU-pytorch,” https://github.com/lucidrains/minGRU-pytorch, 2024, GitHub repository.
+[8] L. Feng, F. Tung, M. O. Ahmed, Y. Bengio, and H. Hajimirsadeghi, “Were rnns all we needed?” CoRR, vol. abs/2410.01201, 2024.
+[9] S. Chen, Y. Wu, C. Wang, S. Liu, D. Tompkins, Z. Chen, W. Che, X. Yu, and F. Wei, “BEATs: Audio pre-training with acoustic tokenizers,” in Proceedings of the International Conference on Machine Learning (ICML), 2023.
