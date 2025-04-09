@@ -105,7 +105,8 @@ class PLModule(pl.LightningModule):
                 checkpoint=checkpoint_name,
                 seq_model_type=config.seq_model_type,
                 seq_model_dim=config.seq_model_dim,
-                embed_dim=embed_dim
+                embed_dim=embed_dim,
+                n_classes_strong=self.config.n_classes
             )
         else:
             raise NotImplementedError(f"Model {config.model_name} not (yet) implemented")
@@ -484,7 +485,8 @@ def train(config):
                          devices=config.num_devices,
                          precision=config.precision,
                          num_sanity_val_steps=0,
-                         check_val_every_n_epoch=config.check_val_every_n_epoch
+                         check_val_every_n_epoch=config.check_val_every_n_epoch,
+                         accumulate_grad_batches=config.accumulate_grad_batches
                          )
 
     # start training and validation for the specified number of epochs
@@ -506,6 +508,7 @@ if __name__ == '__main__':
     parser.add_argument('--task_path', type=str, required=True)
     parser.add_argument('--experiment_name', type=str, default="DCASE2016Task2")
     parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--accumulate_grad_batches', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=16)
     parser.add_argument('--num_devices', type=int, default=1)
     parser.add_argument('--precision', type=int, default=16)

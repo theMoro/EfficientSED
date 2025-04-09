@@ -232,6 +232,26 @@ python ex_audioset_strong.py --model_name=fmn10 --seq_model_type=tf --seq_model_
 
 If everything is set up correctly, this should give a `val/psds1_macro_averaged` of around 43.7.
 
+## Run AudioSet Strong training using the Advanced Knowledge Distillation setup: 
+
+The Advanced Knowledge Distillation setup refers to Section IV.D in the paper which is called _Expanding Knowledge Distillation to AudioSet Weak_.
+
+In this setup, we leverage the top-performing transformer model on AudioSet Strong from [PretrainedSED](https://github.com/fschmid56/PretrainedSED?tab=readme-ov-file#prepare-dataset), BEATs [cite], 
+to generate frame-level predictions for the AudioSet Strong as well as for the AudioSet Weak training split.
+The distillation loss is then computed on batches containing 50% AudioSet Weak and 50% AudioSet Strong samples.
+
+In this setup, the model _fmn10+tf:256_ achieves an even higher PSDS1 score of 45.25 on AudioSet Strong, which is a significant improvement over the 43.86 PSDS1 score of training without the 
+Advanced Knowledge Distillation setup. 
+
+The training can be run using the following command:
+
+```
+python ex_audioset_strong_online_distillation.py --model_name=fmn10 --seq_model_type=tf --seq_model_dim=256 --pretrained=weak
+```
+
+**Note:** In this setup, the arguments ```weak_distillation_loss_weight``` and ```strong_distillation_loss_weight``` are both set to 0 by default, while 
+the arguments ```strong_supervised_loss_weight``` and ```online_distillation_loss_weight``` are set to 0.1 and 0.9 by default, respectively.
+
 
 # ! Repository in progress !
 
@@ -247,8 +267,9 @@ This repository is in progress and will be updated with the pre-trained models a
 - [x] Check inference.py for the efficient models.
 - [x] Add plots from the paper to the README file.
 - [x] Update requirements.txt
-- [ ] Add file to train the efficient models using the "Advanced KD" setup. 
-- [ ] Adapt ex_dcase2016task2.py to work with the efficient models.
+- [x] Add file to train the efficient models using the "Online Distillation" setup. 
+- [x] Adapt ex_dcase2016task2.py to work with the efficient models.
+- [ ] Complete README file with run instructions for DCASE 2016 Task 2. 
 
 
 

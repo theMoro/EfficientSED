@@ -711,7 +711,7 @@ def train(config):
     if config.as_weak_sampling_strategy == 'uniform':
         as_weak_sample_weights = audioset.get_uniform_sample_weights(as_weak_train_set)
     elif config.as_weak_sampling_strategy == 'count':
-        save_folder = '/opt/scratch/as_strong/'  # TODO: change it to resources, fix this problem!
+        save_folder = 'resources'  # '/opt/scratch/as_strong/'  # TODO: change it to resources, fix this problem!
         as_weak_sample_weights = audioset.get_ft_cls_balanced_sample_weights(as_weak_train_set, save_folder=save_folder)
     else:
         raise ValueError(f"Unknown as_weak_sampling_strategy: {config.as_weak_sampling_strategy}")
@@ -843,7 +843,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment_name', type=str, default="AudioSet_Strong")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--accumulate_grad_batches', type=int, default=4)
-    parser.add_argument('--num_workers', type=int, default=0)  # TODO: change to 16
+    parser.add_argument('--num_workers', type=int, default=16)
     parser.add_argument('--num_devices', type=int, default=1)
     parser.add_argument('--precision', type=int, default=16)
     parser.add_argument('--check_val_every_n_epoch', type=int, default=5)
@@ -865,7 +865,7 @@ if __name__ == '__main__':
     parser.add_argument('--seq_model_dim', type=int, default=256)
 
     # training
-    parser.add_argument('--n_epochs', type=int, default=120)
+    parser.add_argument('--n_epochs', type=int, default=240)
     parser.add_argument('--use_balanced_sampler', action='store_true', default=False)
     parser.add_argument('--epoch_len', type=int, default=100_000)
     parser.add_argument('--median_window', type=int, default=9)

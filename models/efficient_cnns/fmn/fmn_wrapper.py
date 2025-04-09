@@ -40,39 +40,47 @@ class FrameMNWrapper(BaseModelWrapper):
         return self.fmn(x)
 
     def separate_params(self):
-        pt_params = [[], [], [], [], [], [], [], [], [], [], [], []]
+        pt_params = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
         for k, p in self.named_parameters():
             if any(['cls_token' in k,
                     'pos_embed' in k,
                     'norm_stats' in k,
                     'patch_embed' in k]):
                 pt_params[0].append(p)
-            elif 'blocks.0.' in k:
+            elif 'features.0.' in k:
                 pt_params[0].append(p)
-            elif 'blocks.1.' in k:
+            elif 'features.1.' in k:
                 pt_params[1].append(p)
-            elif 'blocks.2.' in k:
+            elif 'features.2.' in k:
                 pt_params[2].append(p)
-            elif 'blocks.3.' in k:
+            elif 'features.3.' in k:
                 pt_params[3].append(p)
-            elif 'blocks.4.' in k:
+            elif 'features.4.' in k:
                 pt_params[4].append(p)
-            elif 'blocks.5.' in k:
+            elif 'features.5.' in k:
                 pt_params[5].append(p)
-            elif 'blocks.6.' in k:
+            elif 'features.6.' in k:
                 pt_params[6].append(p)
-            elif 'blocks.7.' in k:
+            elif 'features.7.' in k:
                 pt_params[7].append(p)
-            elif 'blocks.8.' in k:
+            elif 'features.8.' in k:
                 pt_params[8].append(p)
-            elif 'blocks.9.' in k:
+            elif 'features.9.' in k:
                 pt_params[9].append(p)
-            elif 'blocks.10.' in k:
+            elif 'features.10.' in k:
                 pt_params[10].append(p)
-            elif 'blocks.11.' in k:
+            elif 'features.11.' in k:
                 pt_params[11].append(p)
-            elif 'asit.norm.weight' in k or 'asit.norm.bias' in k:
-                pt_params[11].append(p)
+            elif 'features.12.' in k:
+                pt_params[12].append(p)
+            elif 'features.13.' in k:
+                pt_params[13].append(p)
+            elif 'features.14.' in k:
+                pt_params[14].append(p)
+            elif 'features.15.' in k:
+                pt_params[15].append(p)
+            elif 'features.16.' in k:
+                pt_params[16].append(p)
             else:
-                raise ValueError(f"Check separate params for ASiT! Unknown key: {k}")
+                raise ValueError(f"Check separate params for fmn! Unknown key: {k}")
         return list(reversed(pt_params))

@@ -19,7 +19,7 @@ label_map_strong_csv = os.path.join("metadata", "class_labels_indices_strong.csv
 label_map_csv = os.path.join("metadata", "class_labels_indices.csv")
 
 # TODO: set location where you store AudioSet hdf5 files
-audioset_hdf5_path = "/share/hel/datasets/audioset/hdf5s"
+audioset_hdf5_path = "/opt/datasets/audioset/hdf5s"
 
 _AUDIO_FILES = {
     "balanced_train": os.path.join(audioset_hdf5_path, "balanced_train_segments_mp3.hdf"),
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     # TODO: specify location you want to store AudioSet Strong Huggingface Dataset in
     dataset.save_to_disk(
-        f"/share/hel/datasets/HF_datasets/local/audioset_strong",
+        f"/opt/scratch/HF_datasets/local/audioset_strong",
         max_shard_size="2GB",
         num_proc=1,
     )

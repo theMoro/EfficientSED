@@ -18,3 +18,4 @@ transformers
 sed_scores_eval==0.0.3
 intervaltree
 more-itertools
+tqdm

@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import datasets
+from tqdm import tqdm
 
 from data_util.transforms import (
     Mp3DecodeTransform,
@@ -273,8 +274,10 @@ def get_ft_cls_balanced_sample_weights(dataset, sample_weight_offset=100, sample
     if os.path.exists(save_file):
         return torch.load(save_file)
 
+    print("Creating the sample weights! This may take a while...")
+
     all_y = []
-    for sample in dataset:
+    for sample in tqdm(dataset):
         target = sample['target']
         all_y.append(target)
 
