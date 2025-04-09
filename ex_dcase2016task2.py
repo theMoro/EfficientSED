@@ -87,7 +87,7 @@ class PLModule(pl.LightningModule):
         elif config.model_name.startswith("fmn"):
             width = NAME_TO_WIDTH(config.model_name)
             fmn = FrameMNWrapper(width)
-            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]  # TODO: check if it works
+            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]
 
             # build checkpoint name
             checkpoint_name = None

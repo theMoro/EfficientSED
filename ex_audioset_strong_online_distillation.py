@@ -94,7 +94,7 @@ class PLModule(pl.LightningModule):
         elif config.model_name.startswith("fmn"):
             width = NAME_TO_WIDTH(config.model_name)
             fmn = FrameMNWrapper(width)
-            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]  # TODO: check if it works
+            embed_dim = fmn.state_dict()['fmn.features.16.1.bias'].shape[0]
 
             # build checkpoint name
             checkpoint_name = None
@@ -711,8 +711,7 @@ def train(config):
     if config.as_weak_sampling_strategy == 'uniform':
         as_weak_sample_weights = audioset.get_uniform_sample_weights(as_weak_train_set)
     elif config.as_weak_sampling_strategy == 'count':
-        save_folder = 'resources'  # '/opt/scratch/as_strong/'  # TODO: change it to resources, fix this problem!
-        as_weak_sample_weights = audioset.get_ft_cls_balanced_sample_weights(as_weak_train_set, save_folder=save_folder)
+        as_weak_sample_weights = audioset.get_ft_cls_balanced_sample_weights(as_weak_train_set, save_folder='resources')
     else:
         raise ValueError(f"Unknown as_weak_sampling_strategy: {config.as_weak_sampling_strategy}")
 
@@ -852,7 +851,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str,
                         choices=["ATST-F", "BEATs", "fpasst", "M2D", "ASIT"] + \
                                 [f"fmn{width}" for width in ["04", "06", "10", "20", "30"]],
-                        default="fmn10")  # used also for training
+                        default="fmn10")
     # "scratch" = no pretraining
     # "ssl" = SSL pre-trained
     # "weak" = AudioSet Weak pre-trained

@@ -299,11 +299,19 @@ However, we did not fine-tune the hyperparameters for training the frame-wise Mo
 # References
 
 [1] A. Howard, R. Pang, H. Adam, Q. V. Le, M. Sandler, B. Chen, W. Wang, L. Chen, M. Tan, G. Chu, V. Vasudevan, and Y. Zhu, “Searching for mobilenetv3,” in Proceedings of the International Conference on Computer Vision (ICCV), 2019.
+
 [2] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” in Proceedings of the Conference on Neural Information Processing Systems (NeurIPS), 2017.
+
 [3] K. Cho, B. van Merrienboer, C¸ . G ¨ulc¸ ehre, D. Bahdanau, F. Bougares, H. Schwenk, and Y. Bengio, “Learning phrase representations using RNN encoder-decoder for statistical machine translation,” in Proceedings of the Conference on Empirical Methods in Natural Language Processing, 2014, pp. 1724–1734.
+
 [4] A. van den Oord, S. Dieleman, H. Zen, K. Simonyan, O. Vinyals, A. Graves, N. Kalchbrenner, A. W. Senior, and K. Kavukcuoglu, “Wavenet: A generative model for raw audio,” in Speech Synthesis Workshop, 2016.
+
 [5] A. Gu and T. Dao, “Mamba: Linear-time sequence modeling with selective state spaces,” CoRR, vol. abs/2312.00752, 2023.
+
 [6] T. Dao and A. Gu, “Transformers are ssms: Generalized models and efficient algorithms through structured state space duality,” in Proceedings of the International Conference on Machine Learning (ICML), 2024.
+
 [7] P. Wang, “minGRU-pytorch,” https://github.com/lucidrains/minGRU-pytorch, 2024, GitHub repository.
+
 [8] L. Feng, F. Tung, M. O. Ahmed, Y. Bengio, and H. Hajimirsadeghi, “Were rnns all we needed?” CoRR, vol. abs/2410.01201, 2024.
+
 [9] S. Chen, Y. Wu, C. Wang, S. Liu, D. Tompkins, Z. Chen, W. Che, X. Yu, and F. Wei, “BEATs: Audio pre-training with acoustic tokenizers,” in Proceedings of the International Conference on Machine Learning (ICML), 2023.
