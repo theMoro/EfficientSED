@@ -612,7 +612,7 @@ class PLModule(pl.LightningModule):
             y_strong = val_batch['strong']
 
             loss = self.strong_loss(y_hat_strong, y_strong)
-            self.val_loss.append(loss.item().cpu())
+            self.val_loss.append(loss.cpu())
 
             _, scores_postprocessed, _ = batched_decode_preds(
                 y_hat_strong.float(),
