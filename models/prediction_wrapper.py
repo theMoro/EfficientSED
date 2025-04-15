@@ -10,7 +10,7 @@ from config import RESOURCES_FOLDER, CHECKPOINT_URLS
 from models.sequence_models.helper import init_weights
 
 # sequence models
-# from mamba_ssm import Mamba2
+from mamba_ssm import Mamba2
 
 from models.sequence_models.multi_layer_model import MultiLayerModel, MultiLayerModelFp32
 from models.sequence_models.tcn.tcn import TemporalConvNet

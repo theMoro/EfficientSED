@@ -60,7 +60,7 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip3 install torch torchvision torchaudio 
 ```
 
-3. Install the requirements:
+3. After cloning the repository, navigate to the root directory of the repository and install the requirements:
 
  ```bash
 pip3 install -r requirements.txt
