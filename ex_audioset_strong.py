@@ -1,8 +1,10 @@
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 import argparse
 import torch.nn as nn
@@ -413,13 +415,17 @@ class PLModule(pl.LightningModule):
 def train(config):
     # Train Models on temporally-strong portion of AudioSet.
 
+    run_dir = Path(f"./outputs/")  # choose some local path here
+    run_dir.mkdir(parents=True, exist_ok=True)
+
     # logging is done using wandb
     wandb_logger = WandbLogger(
         project="EfficientSED",
         notes="Training efficient models for Sound Event Detection on AudioSet Strong.",
         tags=["AudioSet Strong", "Sound Event Detection", "Pseudo Labels", "Knowledge Distillation"],
         config=config,
-        name=config.experiment_name
+        name=config.experiment_name,
+        dir=run_dir
     )
 
     # encoder manages encoding and decoding of model predictions
@@ -453,6 +459,16 @@ def train(config):
     # create pytorch lightening module
     pl_module = PLModule(config, encoder)
 
+    callbacks = [
+        ModelCheckpoint(
+            dirpath=wandb_logger.log_dir,
+            monitor="val/psds1_macro_averaged",
+            mode="max",
+            save_top_k=1,
+            save_last=True
+        )
+    ] if config.save_model else []
+
     # create the pytorch lightning trainer by specifying the number of epochs to train, the logger,
     # on which kind of device(s) to train and possible callbacks
     trainer = pl.Trainer(max_epochs=config.n_epochs,
@@ -462,7 +478,8 @@ def train(config):
                          precision=config.precision,
                          num_sanity_val_steps=0,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
-                         accumulate_grad_batches=config.accumulate_grad_batches
+                         accumulate_grad_batches=config.accumulate_grad_batches,
+                         callbacks=callbacks
                          )
 
     # start training and validation for the specified number of epochs
@@ -513,6 +530,7 @@ if __name__ == '__main__':
     parser.add_argument('--precision', type=int, default=16)
     parser.add_argument('--evaluate', action='store_true', default=False)
     parser.add_argument('--check_val_every_n_epoch', type=int, default=5)
+    parser.add_argument('--save_model', action='store_true', default=False)
 
     # model
     parser.add_argument('--model_name', type=str,
