@@ -7,7 +7,6 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.utilities import CombinedLoader
 from torch import autocast
-# from lightning.pytorch.utilities import CombinedLoader
 from torch.utils.data import DataLoader
 import argparse
 import torch.nn as nn
@@ -791,7 +790,7 @@ def train(config):
 
     callbacks = [
         ModelCheckpoint(
-            dirpath=wandb_logger.log_dir,
+            dirpath=run_dir,
             monitor="val/psds1_macro_averaged",
             mode="max",
             save_top_k=1,
@@ -898,7 +897,7 @@ if __name__ == '__main__':
 
     # augmentations for AudioSet Weak
     parser.add_argument('--as_weak_mixup_alpha', type=float, default=0.3)
-    parser.add_argument('--as_weak_mixup_p', type=float, default=0.3)
+    parser.add_argument('--as_weak_mixup_p', type=float, default=1.0)
     parser.add_argument('--as_weak_freq_warp_p', type=float, default=0.0)
 
 
@@ -910,7 +909,7 @@ if __name__ == '__main__':
     parser.add_argument('--schedule_mode', type=str, default="cos")
 
     ## max_lr is for the convolutional backbone, seq_lr is for the sequence model
-    parser.add_argument('--max_lr', type=float, default=8e-4)
+    parser.add_argument('--max_lr', type=float, default=3e-3)
     parser.add_argument('--seq_lr', type=float, default=None)
 
     parser.add_argument('--lr_decay', type=float, default=0.9)
